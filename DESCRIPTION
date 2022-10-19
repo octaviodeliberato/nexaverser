@@ -1,0 +1,13 @@
+Package: nexaverser
+Title: TAG Assessment, Feature Selection and Modeling Tools
+Version: 0.0.0.9000
+Authors@R: 
+    person("Octavio", "Deliberato Neto", , "octavio.deliberato@aggxtream.com",
+           role = c("aut", "cre"))
+Description: \code{nexaverser} provides tag analysis tools for plant optimization projects or IoT systems.
+License: MIT + file LICENSE
+Encoding: UTF-8
+Roxygen: list(markdown = TRUE)
+RoxygenNote: 7.2.1
+Depends: 
+    R (>= 4.1)
