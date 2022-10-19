@@ -13,3 +13,4 @@ Depends:
     R (>= 4.1)
 URL: https://github.com/octaviodeliberato/nexaverser
 BugReports: https://github.com/octaviodeliberato/nexaverser/issues
+LazyData: true
