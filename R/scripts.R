@@ -1,0 +1,319 @@
+#' plot_tag_dat
+#'
+#' @author Octavio Deliberato Neto.
+#'
+#' @details
+#' This uses the `trelliscopejs::facet_trelliscope()` to finalize the plots.
+#'
+#' @description This is a data viz function to automagically plot the time
+#' series.
+#'
+#' @param .tag_dat A data frame containing one date (dttm) and some numeric
+#' columns.
+#' @param .ncol The number of columns per page.
+#' @param .nrow The number of rows per page.
+#' @param .loess Logical, whether or not to include a LOESS smoother.
+#' @param .plotly Returns either a static (ggplot2) visualization or an
+#' interactive (plotly) visualization.
+#'
+#' @return A static `ggplot2` plot or an interactive `plotly` plot.
+#' @export
+#'
+plot_tag_dat <- function(
+    .tag_dat,
+    .ncol   = 2,
+    .nrow   = 1,
+    .loess  = TRUE,
+    .plotly = FALSE
+) {
+
+  g <- .tag_dat |>
+    tidyr::pivot_longer(-date) |>
+    timetk::plot_time_series(
+      .date_var    = date,
+      .value       = value,
+      .color_var   = name,
+      .smooth      = .loess,
+      .interactive = .plotly
+    ) +
+    trelliscopejs::facet_trelliscope(~ name, ncol = .ncol, nrow = .nrow,
+                                     scales = "free")
+
+  return(g)
+
+}
+
+
+generate_trend_analysis_data <- function(
+    tag_dat,
+    value_col,
+    ks = 7,
+    kl = 21
+) {
+
+  rolling_ks_mean <- timetk::slidify(
+    .f = ~ mean(.x, na.rm = TRUE),
+    .period  = ks,
+    .align   = "right",
+    .partial = TRUE
+  )
+
+  rolling_kl_mean <- timetk::slidify(
+    .f = ~ mean(.x, na.rm = TRUE),
+    .period  = kl,
+    .align   = "right",
+    .partial = TRUE
+  )
+
+  tag_dat <- tag_dat |>
+    dplyr::mutate(
+      mavg_short = rolling_ks_mean({{ value_col }}),
+      mavg_long  = rolling_kl_mean({{ value_col }})
+    )
+
+  tag_dat <- tag_dat |>
+    dplyr::mutate(diff_perc = (mavg_short - mavg_long) / mavg_long * 100) |>
+    dplyr::mutate(
+      diff_perc = ifelse(
+        is.nan(diff_perc) | is.na(diff_perc) | is.infinite(diff_perc),
+        0, diff_perc
+      )
+    )
+
+  return(tag_dat)
+
+}
+
+
+plot_mavg_data <- function(data) {
+
+  names(data) <- c("date", "tag", "mavg_short", "mavg_long", "diff_perc")
+
+  g <- data |>
+    dplyr::select(-diff_perc) |>
+    tidyr::gather(key = "legend", value = "value", tag:mavg_long,
+                  factor_key = TRUE) |>
+    ggplot2::ggplot(ggplot2::aes(date, value, color = legend, group = legend)) +
+    ggplot2::geom_line(ggplot2::aes(linetype = legend)) +
+    ggplot2::scale_y_continuous(labels = scales::number_format()) +
+    ggplot2::labs(y = "Value", x = "") +
+    tidyquant::theme_tq()
+
+  return(plotly::ggplotly(g))
+
+}
+
+
+#' assess_tag
+#'
+#' @author Octavio Deliberato Neto.
+#'
+#' @param tag_dat A time series with 'date' and 'value' cols.
+#' @param .pad Logical, whether or not to pad the time series.
+#' @param .imp Logical, whether or not to impute missing values using linear
+#' interpolation.
+#' @param .clean Logical, whether or not to identify and replace outliers and
+#' missing values
+#' @param .per A seasonal period to use during the transformation. If period = 1,
+#' linear interpolation is performed. If period > 1, a robust STL decomposition
+#' is first performed and a linear interpolation is applied to the seasonally
+#' adjusted data.
+#' @param .std Logical, whether or not to standardize to mean 0 and standard
+#' deviation 1.
+#' @param .chg_pts Logical, whether or not to perform change-point analysis.
+#' @param .smooth Logical, whether or not to include a trendline smoother.
+#' @param .anom Logical, whether or not to carry out anomaly detection.
+#' @param .alpha Controls the width of the "normal" range regarding anomaly
+#' detection. Lower values are more conservative while higher values are less
+#' prone to incorrectly classifying "normal" observations.
+#'
+#' @return A list.
+#' @export
+#'
+assess_tag <- function(
+    tag_dat,
+    .pad     = FALSE,
+    .imp     = FALSE,
+    .clean   = FALSE,
+    .per     = 1,
+    .std     = FALSE,
+    .chg_pts = TRUE,
+    .smooth  = FALSE,
+    .anom    = TRUE,
+    .alpha   = 0.1
+) {
+
+  names(tag_dat) <- c("date", "value")
+
+  tag_dat$date <- as.Date(tag_dat$date)
+
+  if (.pad) {
+
+    tag_dat <- tag_dat |>
+      timetk::pad_by_time(.date_var = date, .by = 'day', .pad_value = 0)
+
+  }
+
+  if (.imp) {
+
+    tag_dat[, 2] <- timetk::ts_impute_vec(tag_dat |> dplyr::pull(2))
+
+  }
+
+  if (.clean) {
+
+    tag_dat[, 2] <- timetk::ts_clean_vec(dplyr::pull(tag_dat, 2),
+                                         period = .per)
+
+  }
+
+  if (.std) {
+
+    tag_dat[, 2] <- timetk::standardize_vec(tag_dat |> dplyr::pull(2))
+
+  }
+
+  ts_plt <- timetk::plot_time_series(
+    .data     = tag_dat,
+    .date_var = date,
+    .value    = value,
+    .smooth   = .smooth
+  )
+
+  ts_plt_week <- timetk::plot_time_series(
+    .data      = tag_dat,
+    .date_var  = date,
+    .value     = value,
+    .color_var = lubridate::wday(date, label = TRUE),
+    .smooth    = FALSE
+  )
+
+  if (.anom) {
+
+    trend_dat <- generate_trend_analysis_data(
+      tag_dat   = tag_dat,
+      value_col = value
+    )
+
+    trend_plt <- plot_mavg_data(trend_dat)
+
+    anom_plt <- timetk::plot_anomaly_diagnostics(
+      .data     = trend_dat,
+      .date_var = date,
+      .value    = value,
+      .alpha    = .alpha
+    )
+
+   anom_tbl <- timetk::tk_anomaly_diagnostics(
+      .data     = trend_dat,
+      .date_var = date,
+      .value    = value,
+      .alpha    = .alpha
+    )
+
+  } else {
+
+    anom_tbl  <- NULL
+    anom_plt  <- NULL
+    trend_dat <- NULL
+    trend_plt <- NULL
+
+  }
+
+  proc_behaviour_30 <- qcc::qcc(
+    data   = tag_dat$value |> utils::tail(30),
+    type   = "xbar.one",
+    labels = tag_dat$date |> utils::tail(30),
+    plot   = FALSE
+  )
+
+  run_chart <- qicharts2::qic(tag_dat$date, tag_dat$value, chart = 'i')
+
+  change_point_analyzer_safe <- purrr::possibly(
+    ChangePointTaylor::change_point_analyzer,
+    NULL
+  )
+
+  if (.chg_pts) {
+
+    change_points <- change_point_analyzer_safe(
+      tag_dat$value,
+      label = tag_dat$date,
+      n_bootstraps = 100
+    )
+
+    if (!is.null(change_points)) {
+
+      Direction <- change_points$To - change_points$From
+
+      change_points$Direction <- ifelse(
+        Direction > 0,
+        "Up",
+        "Down"
+      )
+
+      change_points_balance <- change_points$Direction |>
+        table()
+
+      change_points_last_change <- change_points |>
+        utils::tail(1)
+
+      xintercept <- anytime::anydate(change_points$label)
+
+      change_points_plt <-
+        ggplot2::ggplot(tag_dat, ggplot2::aes(x = anytime::anydate(date),
+                                              y = value, group = 1)) +
+        ggplot2::geom_line() +
+        ggplot2::geom_point() +
+        ggplot2::theme_bw() +
+        ggplot2::scale_x_date(date_breaks = "1 month",
+                              date_labels = "%b '%y") +
+        ggplot2::theme(
+          axis.text.x  = ggplot2::element_text(angle = 45, vjust = 1,
+                                               hjust =1),
+          axis.title.x = ggplot2::element_blank()
+        ) +
+        ggplot2::geom_vline(
+          xintercept = xintercept,
+          color      = "steelblue",
+          linetype   = "dashed",
+          size       = 1.3
+        )
+
+    } else {
+
+      change_points_plt         <- NULL
+      change_points_balance     <- NULL
+      change_points_last_change <- NULL
+
+    }
+
+  } else {
+
+    change_points             <- NULL
+    change_points_plt         <- NULL
+    change_points_balance     <- NULL
+    change_points_last_change <- NULL
+
+  }
+
+  assmnt <- list(
+    tag_data                  = tag_dat,
+    ts_plt                    = ts_plt,
+    ts_plt_week               = ts_plt_week,
+    proc_behaviour_30         = proc_behaviour_30,
+    run_chart                 = run_chart,
+    trend_data                = trend_dat,
+    trend_plt                 = trend_plt,
+    anom_plt                  = anom_plt,
+    anom_tbl                  = anom_tbl,
+    change_points             = change_points,
+    change_points_balance     = change_points_balance,
+    change_points_last_change = change_points_last_change,
+    change_points_plt         = change_points_plt
+  ) |>
+    purrr::compact()
+
+  return(assmnt)
+
+}

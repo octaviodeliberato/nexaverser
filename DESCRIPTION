@@ -15,6 +15,18 @@ URL: https://github.com/octaviodeliberato/nexaverser
 BugReports: https://github.com/octaviodeliberato/nexaverser/issues
 LazyData: true
 Imports: 
+    anytime,
+    ChangePointTaylor,
+    dplyr,
+    ggplot2,
+    lubridate,
+    plotly,
+    purrr,
+    qcc,
+    qicharts2,
+    scales,
+    tidyquant,
     tidyr,
     timetk,
-    trelliscopejs
+    trelliscopejs,
+    utils
