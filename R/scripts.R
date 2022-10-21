@@ -159,7 +159,8 @@ assess_tag <- function(
 
   if (.imp) {
 
-    .tag_dat[, 2] <- timetk::ts_impute_vec(.tag_dat |> dplyr::pull(2))
+    .tag_dat[, 2] <- timetk::ts_impute_vec(dplyr::pull(.tag_dat, 2),
+                                           period = .per)
 
   }
 
@@ -189,6 +190,13 @@ assess_tag <- function(
     .value     = value,
     .color_var = lubridate::wday(date, label = TRUE),
     .smooth    = FALSE
+  )
+
+  calendar_heatmap <- healthyR.ts::ts_calendar_heatmap_plot(
+    .data        = .tag_dat,
+    .date_col    = date,
+    .value_col   = value,
+    .interactive = TRUE
   )
 
   if (.anom) {
@@ -303,6 +311,7 @@ assess_tag <- function(
   assmnt <- list(
     ts_plt                    = ts_plt,
     ts_plt_week               = ts_plt_week,
+    calendar_heatmap          = calendar_heatmap,
     proc_behaviour_30         = proc_behaviour_30,
     run_chart                 = plotly::ggplotly(run_chart),
     trend_data                = trend_dat,
@@ -338,6 +347,7 @@ forecast_tag <- function(.tag_dat, .ndays = 15, .interactive = FALSE) {
     tibble::column_to_rownames(var = "date")
 
   names(ds) <- "value"
+  ds$value <- timetk::ts_impute_vec(ds$value)
 
   ex1 <- spooky::spooky(
     ds,
