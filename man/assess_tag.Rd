@@ -5,7 +5,7 @@
 \title{assess_tag}
 \usage{
 assess_tag(
-  tag_dat,
+  .tag_dat,
   .pad = FALSE,
   .imp = FALSE,
   .clean = FALSE,
@@ -18,7 +18,7 @@ assess_tag(
 )
 }
 \arguments{
-\item{tag_dat}{A time series with 'date' and 'value' cols.}
+\item{.tag_dat}{A time series with 'date' and 'value' cols.}
 
 \item{.pad}{Logical, whether or not to pad the time series.}
 

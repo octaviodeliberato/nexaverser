@@ -1,4 +1,4 @@
-#' plot_tag_dat
+#' plot_tag_data
 #'
 #' @author Octavio Deliberato Neto.
 #'
@@ -19,7 +19,7 @@
 #' @return A static `ggplot2` plot or an interactive `plotly` plot.
 #' @export
 #'
-plot_tag_dat <- function(
+plot_tag_data <- function(
     .tag_dat,
     .ncol   = 2,
     .nrow   = 1,
@@ -89,6 +89,8 @@ plot_mavg_data <- function(data) {
 
   names(data) <- c("date", "tag", "mavg_short", "mavg_long", "diff_perc")
 
+  cols <- c("tag" = "gray50", "mavg_short" = "red", "mavg_long" = "blue")
+
   g <- data |>
     dplyr::select(-diff_perc) |>
     tidyr::gather(key = "legend", value = "value", tag:mavg_long,
@@ -97,7 +99,8 @@ plot_mavg_data <- function(data) {
     ggplot2::geom_line(ggplot2::aes(linetype = legend)) +
     ggplot2::scale_y_continuous(labels = scales::number_format()) +
     ggplot2::labs(y = "Value", x = "") +
-    tidyquant::theme_tq()
+    tidyquant::theme_tq() +
+    ggplot2::scale_color_manual(values = cols)
 
   return(plotly::ggplotly(g))
 
@@ -108,7 +111,7 @@ plot_mavg_data <- function(data) {
 #'
 #' @author Octavio Deliberato Neto.
 #'
-#' @param tag_dat A time series with 'date' and 'value' cols.
+#' @param .tag_dat A time series with 'date' and 'value' cols.
 #' @param .pad Logical, whether or not to pad the time series.
 #' @param .imp Logical, whether or not to impute missing values using linear
 #' interpolation.
@@ -131,7 +134,7 @@ plot_mavg_data <- function(data) {
 #' @export
 #'
 assess_tag <- function(
-    tag_dat,
+    .tag_dat,
     .pad     = FALSE,
     .imp     = FALSE,
     .clean   = FALSE,
@@ -143,45 +146,45 @@ assess_tag <- function(
     .alpha   = 0.1
 ) {
 
-  names(tag_dat) <- c("date", "value")
+  names(.tag_dat) <- c("date", "value")
 
-  tag_dat$date <- as.Date(tag_dat$date)
+  .tag_dat$date <- as.Date(.tag_dat$date)
 
   if (.pad) {
 
-    tag_dat <- tag_dat |>
+    .tag_dat <- .tag_dat |>
       timetk::pad_by_time(.date_var = date, .by = 'day', .pad_value = 0)
 
   }
 
   if (.imp) {
 
-    tag_dat[, 2] <- timetk::ts_impute_vec(tag_dat |> dplyr::pull(2))
+    .tag_dat[, 2] <- timetk::ts_impute_vec(.tag_dat |> dplyr::pull(2))
 
   }
 
   if (.clean) {
 
-    tag_dat[, 2] <- timetk::ts_clean_vec(dplyr::pull(tag_dat, 2),
-                                         period = .per)
+    .tag_dat[, 2] <- timetk::ts_clean_vec(dplyr::pull(.tag_dat, 2),
+                                          period = .per)
 
   }
 
   if (.std) {
 
-    tag_dat[, 2] <- timetk::standardize_vec(tag_dat |> dplyr::pull(2))
+    .tag_dat[, 2] <- timetk::standardize_vec(.tag_dat |> dplyr::pull(2))
 
   }
 
   ts_plt <- timetk::plot_time_series(
-    .data     = tag_dat,
+    .data     = .tag_dat,
     .date_var = date,
     .value    = value,
     .smooth   = .smooth
   )
 
   ts_plt_week <- timetk::plot_time_series(
-    .data      = tag_dat,
+    .data      = .tag_dat,
     .date_var  = date,
     .value     = value,
     .color_var = lubridate::wday(date, label = TRUE),
@@ -191,7 +194,7 @@ assess_tag <- function(
   if (.anom) {
 
     trend_dat <- generate_trend_analysis_data(
-      tag_dat   = tag_dat,
+      tag_dat   = .tag_dat,
       value_col = value
     )
 
@@ -221,13 +224,13 @@ assess_tag <- function(
   }
 
   proc_behaviour_30 <- qcc::qcc(
-    data   = tag_dat$value |> utils::tail(30),
+    data   = .tag_dat$value |> utils::tail(30),
     type   = "xbar.one",
-    labels = tag_dat$date |> utils::tail(30),
+    labels = .tag_dat$date |> utils::tail(30),
     plot   = FALSE
   )
 
-  run_chart <- qicharts2::qic(tag_dat$date, tag_dat$value, chart = 'i')
+  run_chart <- qicharts2::qic(.tag_dat$date, .tag_dat$value, chart = 'i')
 
   change_point_analyzer_safe <- purrr::possibly(
     ChangePointTaylor::change_point_analyzer,
@@ -237,8 +240,8 @@ assess_tag <- function(
   if (.chg_pts) {
 
     change_points <- change_point_analyzer_safe(
-      tag_dat$value,
-      label = tag_dat$date,
+      .tag_dat$value,
+      label = .tag_dat$date,
       n_bootstraps = 100
     )
 
@@ -261,8 +264,8 @@ assess_tag <- function(
       xintercept <- anytime::anydate(change_points$label)
 
       change_points_plt <-
-        ggplot2::ggplot(tag_dat, ggplot2::aes(x = anytime::anydate(date),
-                                              y = value, group = 1)) +
+        ggplot2::ggplot(.tag_dat, ggplot2::aes(x = anytime::anydate(date),
+                                               y = value, group = 1)) +
         ggplot2::geom_line() +
         ggplot2::geom_point() +
         ggplot2::theme_bw() +
@@ -298,11 +301,10 @@ assess_tag <- function(
   }
 
   assmnt <- list(
-    tag_data                  = tag_dat,
     ts_plt                    = ts_plt,
     ts_plt_week               = ts_plt_week,
     proc_behaviour_30         = proc_behaviour_30,
-    run_chart                 = run_chart,
+    run_chart                 = plotly::ggplotly(run_chart),
     trend_data                = trend_dat,
     trend_plt                 = trend_plt,
     anom_plt                  = anom_plt,
@@ -315,5 +317,84 @@ assess_tag <- function(
     purrr::compact()
 
   return(assmnt)
+
+}
+
+
+#' forecast_tag
+#'
+#' @param .tag_dat A time series with 'date' (days) and 'value' cols.
+#' @param .ndays The forecasting horizon, in days.
+#' @param .interactive Returns either a static (ggplot2) visualization or an
+#' interactive (plotly) visualization.
+#'
+#' @return Either a `ggplot2` or a `plotly` plot.
+#' @export
+#'
+forecast_tag <- function(.tag_dat, .ndays = 15, .interactive = FALSE) {
+
+  ds <- .tag_dat |>
+    tibble::as_tibble() |>
+    tibble::column_to_rownames(var = "date")
+
+  names(ds) <- "value"
+
+  ex1 <- spooky::spooky(
+    ds,
+    n_samp    = ceiling(0.07 * length(ds$value)),
+    seq_len   = .ndays,
+    n_windows = ceiling(0.03 * length(ds$value)),
+    dates     = as.Date(rownames(ds)),
+    lno = NULL
+  )
+
+  fore      <- ex1$best_model$preds$value$mean
+  fore_low  <- ex1$best_model$preds$value$`10%`
+  fore_high <- ex1$best_model$preds$value$`90%`
+  values    <- ds$value |> as.numeric()
+  dates     <- as.Date(rownames(ds))
+
+  full_data_tbl <- tibble::tibble(
+    date  = dates,
+    value = values
+  ) |>
+    timetk::future_frame(
+      .date_var   = date,
+      .length_out = .ndays,
+      .bind_data  = TRUE
+    ) |>
+    dplyr::mutate(actual = NA, fore = NA, fore_low = NA, fore_high = NA)
+
+  filt <- full_data_tbl$value |> is.na() |> which()
+
+  full_data_tbl[-filt, "actual"]   <- ds |> dplyr::pull(value)
+  full_data_tbl[filt, "fore"]      <- fore
+  full_data_tbl[filt, "fore_low"]  <- fore_low
+  full_data_tbl[filt, "fore_high"] <- fore_high
+
+  if (.interactive) {
+
+    fore_plt <- full_data_tbl |>
+      dplyr::select(-value) |>
+      tidyr::pivot_longer(-date) |>
+      timetk::plot_time_series(
+        .date_var  = date,
+        .value     = value,
+        .color_var = name,
+        .smooth    = FALSE
+      )
+
+  } else {
+
+    fore_plt <- ex1[["best_model"]][["plots"]][["value"]]
+
+  }
+
+  return(
+    list(
+      fore_data = dplyr::select(full_data_tbl, -value),
+      fore_plot = fore_plt
+    )
+  )
 
 }

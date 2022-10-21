@@ -25,6 +25,8 @@ Imports:
     qcc,
     qicharts2,
     scales,
+    spooky,
+    tibble,
     tidyquant,
     tidyr,
     timetk,
