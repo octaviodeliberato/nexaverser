@@ -51,10 +51,6 @@ fz_data_3 <- purrr::map2_df(
 
 fz_data <- dplyr::bind_cols(date = fz_data_1$date, fz_data_3)
 
-# cols_to_keep <- (colSums(is.na(fz_data)) / nrow(fz_data)) < 1/3
-#
-# table(cols_to_keep)
-#
-# fz_data <- fz_data[, cols_to_keep]
+# fz_data <- readxl::read_excel("data-raw/lb_fz_filtros033silw_zn.xlsx")
 
 usethis::use_data(fz_data, overwrite = TRUE)

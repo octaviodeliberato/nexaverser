@@ -148,6 +148,26 @@ assess_tag <- function(
 
   names(.tag_dat) <- c("date", "value")
 
+  freq <- .tag_dat$date |> timetk::tk_get_frequency(period = "day")
+
+  if (freq < 1) {
+
+    rlang::abort(
+      message = "A daily or a high frequency time series must be supplied.",
+      use_cli_format = TRUE
+    )
+
+  } else if (freq > 1) { # more than 1 obs per day
+
+    .tag_dat <- .tag_dat |>
+      timetk::summarise_by_time(
+        .date_var = date,
+        .by = "day",
+        value = mean(value, na.rm = TRUE)
+      )
+
+  }
+
   .tag_dat$date <- as.Date(.tag_dat$date)
 
   if (.pad) {
@@ -346,6 +366,19 @@ forecast_tag <- function(.tag_dat, .ndays = 15, .interactive = FALSE) {
     tibble::as_tibble() |>
     tibble::column_to_rownames(var = "date")
 
+  dates <- .tag_dat[[1]]
+
+  freq <- dates |> timetk::tk_get_frequency(period = "day")
+
+  if (freq < 1) {
+
+    rlang::abort(
+      message = "A daily time series must be supplied.",
+      use_cli_format = TRUE
+    )
+
+  }
+
   names(ds) <- "value"
   ds$value <- timetk::ts_impute_vec(ds$value)
 
@@ -408,3 +441,141 @@ forecast_tag <- function(.tag_dat, .ndays = 15, .interactive = FALSE) {
   )
 
 }
+
+
+#' impute_missing_values
+#'
+#' @param .tag_dat A time series with 'date' (days) and 'value' cols.
+#'
+#' @return A data frame with imputed values.
+#' @export
+#'
+impute_missing_values <- function(.tag_dat) {
+
+  dates <- .tag_dat$date
+
+  .tag_dat <- .tag_dat |> dplyr::select(-date)
+
+  var_names <- names(.tag_dat)
+
+  ts_sig <- timetk::tk_get_timeseries_signature(dates)
+
+  .tag_dat <- dplyr::bind_cols(ts_sig, .tag_dat)
+
+  imp <- mice::mice(data = .tag_dat, m = 5, method = "cart")
+
+  var_names |>
+    lapply(\(x) imp[["imp"]][[x]] |> apply(1, mean)) -> .
+
+  names(.) <- var_names
+
+  for (i in seq_along(var_names)) {
+
+    .tag_dat[as.integer(names(.[[i]])), var_names[i]] <- .[[i]]
+
+  }
+
+  imputed_data <- dplyr::bind_cols(
+    date = dates,
+    .tag_dat[, var_names]
+  )
+
+  return(imputed_data)
+
+}
+
+
+#' select_features_with_boruta
+#'
+#' @param .tag_dat A time series with 'date' (days) and 'value' cols.
+#' @param .target The name (string) of the target variable.
+#' @param .balance Logical, whether or not to balance the dataset.
+#' @param .with_tentative Logical, whether or not to include the 'tentative
+#' features' in the selection.
+#' @param .return_data Logical, whether or not to return the dataset in the
+#' return object.
+#' @param .task Either "regression" or "classification".
+#'
+#' @return A list.
+#' @export
+#'
+select_features_with_boruta <- function(
+    .tag_dat,
+    .target,
+    .balance        = FALSE,
+    .with_tentative = TRUE,
+    .return_data    = FALSE,
+    .task           = "regression"
+) {
+
+  # missing some safety checks
+
+  set.seed(1)
+
+  x <- setdiff(names(.tag_dat), c("date", .target))
+
+  df <- .tag_dat[, c(x, .target)]
+
+  if (.balance) {
+
+    if (.task == "regression") {
+
+      df <- UBL::RandOverRegress(
+        form   = stats::as.formula(stringr::str_glue("{.target} ~ .")),
+        dat    = as.data.frame(df),
+        C.perc = "balance"
+      )
+
+      f <- stats::as.formula(stringr::str_glue("{.target} ~ ."))
+
+      feature_selection <- Boruta::Boruta(f, data = df)
+
+      selected_attrs <- Boruta::getSelectedAttributes(
+        feature_selection,
+        withTentative = .with_tentative
+      )
+
+    } else { # classification
+
+      df <- UBL::RandOverClassif(
+        form   = stats::as.formula(stringr::str_glue("{.target} ~ .")),
+        dat    = as.data.frame(df),
+        C.perc = "balance"
+      )
+
+      f <- stats::as.formula(stringr::str_glue("{.target} ~ ."))
+
+      feature_selection <- Boruta::Boruta(f, data = df)
+
+      selected_attrs <- Boruta::getSelectedAttributes(
+        feature_selection,
+        withTentative = .with_tentative
+      )
+
+    }
+
+  } else { # don't balance the data
+
+    f <- stats::as.formula(stringr::str_glue("{.target} ~ ."))
+
+    feature_selection <- Boruta::Boruta(f, data = df)
+
+    selected_attrs <- Boruta::getSelectedAttributes(
+      feature_selection,
+      withTentative = .with_tentative
+    )
+
+  }
+
+  features <- list(selected_features = selected_attrs)
+
+  if (.return_data) {
+
+    features[["data"]] <- df
+
+  }
+
+  return(features)
+
+}
+

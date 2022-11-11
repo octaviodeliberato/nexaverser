@@ -2,4 +2,6 @@
 
 export(assess_tag)
 export(forecast_tag)
+export(impute_missing_values)
 export(plot_tag_data)
+export(select_features_with_boruta)
