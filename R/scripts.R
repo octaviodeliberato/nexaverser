@@ -579,3 +579,228 @@ select_features_with_boruta <- function(
 
 }
 
+
+#' select_features_with_trex
+#'
+#' @param .tag_dat A time series with 'date' (days) and 'value' cols.
+#' @param .target The name (string) of the target variable.
+#' @param .balance Logical, whether or not to balance the dataset.
+#' @param .with_tentative Logical, whether or not to include the 'tentative
+#' features' in the selection.
+#' @param .return_data Logical, whether or not to return the dataset in the
+#' return object.
+#' @param .task Either "regression" or "classification".
+#'
+#' @return A list.
+#' @export
+#'
+select_features_with_trex <- function(
+    .tag_dat,
+    .target,
+    .balance        = FALSE,
+    .with_tentative = TRUE,
+    .return_data    = FALSE,
+    .task           = "regression"
+) {
+
+  # missing some safety checks
+
+  set.seed(1)
+
+  # Numerical zero
+  eps <- .Machine$double.eps
+
+  x <- setdiff(names(.tag_dat), c("date", .target))
+
+  df <- .tag_dat[, c(x, .target)]
+
+  if (.balance) {
+
+    if (.task == "regression") {
+
+      df <- UBL::RandOverRegress(
+        form   = stats::as.formula(stringr::str_glue("{.target} ~ .")),
+        dat    = as.data.frame(df),
+        C.perc = "balance"
+      )
+
+      X <- df |>
+        dplyr::select(-dplyr::all_of(.target)) |>
+        as.matrix()
+
+      target <- as.matrix(dplyr::pull(df, .target))
+
+      res <- TRexSelector::trex(X = X, y = target, tFDR = 0.05, verbose = FALSE)
+
+      selected_attrs <- names(df[, which(res$selected_var > eps)])
+
+    } else { # classification
+
+      df <- UBL::RandOverClassif(
+        form   = stats::as.formula(stringr::str_glue("{.target} ~ .")),
+        dat    = as.data.frame(df),
+        C.perc = "balance"
+      )
+
+      X <- df |>
+        dplyr::select(-dplyr::all_of(.target)) |>
+        as.matrix()
+
+      target <- as.matrix(dplyr::pull(df, .target))
+
+      res <- TRexSelector::trex(X = X, y = target, tFDR = 0.05, verbose = FALSE)
+
+      selected_attrs <- names(df[, which(res$selected_var > eps)])
+
+    }
+
+  } else { # don't balance the data
+
+    X <- df |>
+      dplyr::select(-dplyr::all_of(.target)) |>
+      as.matrix()
+
+    target <- as.matrix(dplyr::pull(df, .target))
+
+    res <- TRexSelector::trex(X = X, y = target, tFDR = 0.05, verbose = FALSE)
+
+    selected_attrs <- names(df[, which(res$selected_var > eps)])
+
+  }
+
+  features <- list(selected_features = selected_attrs)
+
+  if (.return_data) {
+
+    features[["data"]] <- df
+
+  }
+
+  return(features)
+
+}
+
+
+#' train_cubist_model
+#'
+#' @param .data A time series with 'date' (days) and 'value' cols.
+#' @param .target The name (string) of the target variable.
+#' @param .prop The proportion of data to be retained for modeling/analysis.
+#' @param .strat Logical, whether or not to conduct stratified sampling by
+#' '.target'
+#' @param .tune Default is TRUE, this will create a tuning grid and tuned
+#' workflow.
+#' @param .grid_size Default is 10.
+#' @param .num_cores Default is 1.
+#' @param .best_metric Default is "rmse".
+#' @param .surrogate_model Logical, whether or not to conduct surrogate
+#' modeling, i.e., use all data to train the model.
+#'
+#' @return A list.
+#' @export
+#'
+train_cubist_model <- function(
+    .data,
+    .target,
+    .prop            = 0.8,
+    .strat           = FALSE,
+    .tune            = TRUE,
+    .grid_size       = 10,
+    .num_cores       = 1,
+    .best_metric     = "rmse",
+    .surrogate_model = FALSE
+) {
+
+  # missing safety checks
+
+  if (!requireNamespace("rules", quietly = TRUE)) {
+    stop(
+      "Package \"rules\" must be installed to use this function.",
+      call. = FALSE
+    )
+  } else {
+    box::use(rules[...])
+  }
+
+  f <- stats::as.formula(stringr::str_glue("{.target} ~ ."))
+  .data$date <- NULL
+
+  # Splits
+  set.seed(1)
+
+  if (!.surrogate_model) {
+
+    if (.strat) {
+      splits <- rsample::initial_split(data = .data, prop = .prop,
+                                       strata = .target)
+    } else {
+      splits <- rsample::initial_split(data = .data, prop = .prop)
+    }
+
+    train <- rsample::training(splits)
+    test  <- rsample::testing(splits)
+
+  } else { # surrogate model
+
+    pointr::ptr("train", ".data")
+    pointr::ptr("test",  ".data")
+
+  }
+
+  rec_obj <- healthyR.ai::hai_cubist_data_prepper(train, f)
+
+  auto_cube <- healthyR.ai::hai_auto_cubist(
+    .data        = train,
+    .rec_obj     = rec_obj,
+    .best_metric = .best_metric,
+    .tune        = .tune
+  )
+
+  best_model <- auto_cube$model_info$fitted_wflw
+
+  # Check performance
+  test_pred <- stats::predict(best_model, new_data = test)
+
+  df_test <- tibble::tibble(
+    actual = test[[.target]],
+    pred   = test_pred$.pred
+  )
+
+  mod_rmse     <- yardstick::rmse_vec(df_test$actual, df_test$pred)
+  mod_mae      <- yardstick::mae_vec(df_test$actual, df_test$pred)
+  mod_rsq_trad <- yardstick::rsq_trad_vec(df_test$actual, df_test$pred)
+  mod_acc      <- 100 - yardstick::smape_vec(df_test$actual, df_test$pred)
+
+  tb <- tibble::tibble(
+    rmse = mod_rmse |> round(2),
+    mae  = mod_mae |> round(2),
+    r2   = mod_rsq_trad |> round(2),
+    acc  = mod_acc |> round(1)
+  )
+
+  inset_tbl <- tibble::tibble(
+    x = df_test$actual[2],
+    y = df_test$pred |> max(),
+    tb = list(tb)
+  )
+
+  g <- ggplot2::ggplot(
+    data = df_test,
+    mapping = ggplot2::aes(x = actual, y = pred)
+  ) +
+    ggplot2::geom_abline(col = "green", lty = 2, lwd = 1) +
+    ggplot2::geom_point(alpha = 0.5) +
+    ggplot2::coord_fixed(ratio = 1) +
+    ggpp::geom_table(
+      data = inset_tbl,
+      ggplot2::aes(x = x, y = y, label = tb)
+    )
+
+  return(
+    list(
+      model     = best_model,
+      test_plot = g
+    )
+  )
+
+}

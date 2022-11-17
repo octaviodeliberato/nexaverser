@@ -17,17 +17,22 @@ LazyData: true
 Imports: 
     anytime,
     Boruta,
+    box,
     ChangePointTaylor,
     dplyr,
     ggplot2,
+    ggpp,
+    healthyR.ai,
     healthyR.ts,
     lubridate,
     mice,
     plotly,
+    pointr,
     purrr,
     qcc,
     qicharts2,
     rlang,
+    rsample,
     scales,
     spooky,
     stats,
@@ -37,5 +42,9 @@ Imports:
     tidyr,
     timetk,
     trelliscopejs,
+    TRexSelector,
     UBL,
-    utils
+    utils,
+    yardstick
+Suggests: 
+    rules

@@ -22,8 +22,18 @@ tag_tbl <- nexaverser::fz_data
 
 tag_imp <- tidyr::drop_na(tag_tbl)
 
-# * Oversampling 1 ----
-sel_features <- nexaverser::select_features_with_boruta(
+# * Feature Selection 1 ----
+sel_features_1 <- nexaverser::select_features_with_boruta(
+  .tag_dat        = tag_imp,
+  .target         = "lb_fz_filtros033silw_zn",
+  .balance        = TRUE,
+  .with_tentative = TRUE,
+  .return_data    = FALSE,
+  .task           = "regression"
+)
+
+# * Feature Selection 2 ----
+sel_features_2 <- nexaverser::select_features_with_trex(
   .tag_dat        = tag_imp,
   .target         = "lb_fz_filtros033silw_zn",
   .balance        = TRUE,
@@ -32,97 +42,18 @@ sel_features <- nexaverser::select_features_with_boruta(
   .task           = "regression"
 )
 
-# * Feature Selection 1 ----
-set.seed(1)
-
-f <- as.formula(stringr::str_glue("{y} ~ ."))
-
-feature_selection <- Boruta::Boruta(f, data = df, doTrace = 1)
-
-selected_attrs <- Boruta::getSelectedAttributes(feature_selection,
-                                                withTentative = TRUE)
-
-# * Feature Selection 2 ----
-set.seed(1)
-
-# Numerical zero
-eps <- .Machine$double.eps
-
-# Variable selection via T-Rex
-X <- df |>
-  dplyr::select(-dplyr::all_of(y)) |>
-  as.matrix()
-
-target <- as.matrix(dplyr::pull(df, y))
-
-res <- TRexSelector::trex(X = X, y = target, tFDR = 0.05, verbose = FALSE)
-
-selected_vars <- names(df[, which(res$selected_var > eps)])
-
 
 # MODELING 1 --------------------------------------------------------------
 
-box::use(rules[...])
+df <- sel_features_2$data
 
-y <- "lb_fz_filtros033silw_zn"
-
-data <- df[, c(selected_vars, y)]
-
-# Splits
-set.seed(1)
-splits <- rsample::initial_split(data, prop = 0.8, strata = y)
-train  <- rsample::training(splits)
-test   <- rsample::testing(splits)
-
-rec_obj <- healthyR.ai::hai_cubist_data_prepper(train, f)
-
-auto_cube <- healthyR.ai::hai_auto_cubist(
-  .data        = train,
-  .rec_obj     = rec_obj,
-  .best_metric = "rmse",
-  .tune        = TRUE
+cubist_model <- nexaverser::train_cubist_model(
+  .data   = df,
+  .target = "lb_fz_filtros033silw_zn",
+  .strat  = FALSE,
+  .tune   = FALSE,
+  .surrogate_model = TRUE
 )
-
-best_model <- auto_cube$model_info$fitted_wflw
-
-# Check performance
-test_pred <- predict(best_model, new_data = test)
-
-df_test <- tibble::tibble(
-  actual = test[[y]],
-  pred   = test_pred$.pred
-)
-
-mod_rmse     <- yardstick::rmse_vec(df_test$actual, df_test$pred)
-mod_mae      <- yardstick::mae_vec(df_test$actual, df_test$pred)
-mod_rsq_trad <- yardstick::rsq_trad_vec(df_test$actual, df_test$pred)
-mod_acc      <- 100 - yardstick::smape_vec(df_test$actual, df_test$pred)
-
-tb <- tibble::tibble(
-  rmse = mod_rmse |> round(2),
-  mae  = mod_mae |> round(2),
-  r2   = mod_rsq_trad |> round(2),
-  acc  = mod_acc |> round(1)
-)
-
-inset_tbl <- tibble::tibble(
-  x = df_test$actual[2],
-  y = df_test$pred |> max(),
-  tb = list(tb)
-)
-
-ggplot2::ggplot(
-  data = df_test,
-  mapping = ggplot2::aes(x = actual, y = pred)
-) +
-  ggplot2::geom_abline(col = "green", lty = 2, lwd = 1) +
-  ggplot2::geom_point(alpha = 0.5) +
-  ggplot2::coord_fixed(ratio = 1) +
-  ggpp::geom_table(
-    data = inset_tbl,
-    ggplot2::aes(x = x, y = y, label = tb)
-  )
-
 
 # MODELING 2 --------------------------------------------------------------
 
