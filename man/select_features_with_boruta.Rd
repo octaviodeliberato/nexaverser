@@ -14,7 +14,7 @@ select_features_with_boruta(
 )
 }
 \arguments{
-\item{.tag_dat}{A time series with 'date' (days) and 'value' cols.}
+\item{.tag_dat}{A time series with \code{date} (days) and \code{value} cols.}
 
 \item{.target}{The name (string) of the target variable.}
 

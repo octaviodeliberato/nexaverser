@@ -111,7 +111,7 @@ plot_mavg_data <- function(data) {
 #'
 #' @author Octavio Deliberato Neto.
 #'
-#' @param .tag_dat A time series with 'date' and 'value' cols.
+#' @param .tag_dat A time series with `date` and `value` cols.
 #' @param .pad Logical, whether or not to pad the time series.
 #' @param .imp Logical, whether or not to impute missing values using linear
 #' interpolation.
@@ -352,7 +352,7 @@ assess_tag <- function(
 
 #' forecast_tag
 #'
-#' @param .tag_dat A time series with 'date' (days) and 'value' cols.
+#' @param .tag_dat A time series with `date` (days) and `value` cols.
 #' @param .ndays The forecasting horizon, in days.
 #' @param .interactive Returns either a static (ggplot2) visualization or an
 #' interactive (plotly) visualization.
@@ -445,7 +445,7 @@ forecast_tag <- function(.tag_dat, .ndays = 15, .interactive = FALSE) {
 
 #' impute_missing_values
 #'
-#' @param .tag_dat A time series with 'date' (days) and 'value' cols.
+#' @param .tag_dat A time series with `date` (days) and `value` cols.
 #'
 #' @return A data frame with imputed values.
 #' @export
@@ -487,7 +487,7 @@ impute_missing_values <- function(.tag_dat) {
 
 #' select_features_with_boruta
 #'
-#' @param .tag_dat A time series with 'date' (days) and 'value' cols.
+#' @param .tag_dat A time series with `date` (days) and `value` cols.
 #' @param .target The name (string) of the target variable.
 #' @param .balance Logical, whether or not to balance the dataset.
 #' @param .with_tentative Logical, whether or not to include the 'tentative
@@ -582,7 +582,7 @@ select_features_with_boruta <- function(
 
 #' select_features_with_trex
 #'
-#' @param .tag_dat A time series with 'date' (days) and 'value' cols.
+#' @param .tag_dat A time series with `date` (days) and `value` cols.
 #' @param .target The name (string) of the target variable.
 #' @param .balance Logical, whether or not to balance the dataset.
 #' @param .with_tentative Logical, whether or not to include the 'tentative
@@ -683,7 +683,7 @@ select_features_with_trex <- function(
 
 #' train_cubist_model
 #'
-#' @param .data A time series with 'date' (days) and 'value' cols.
+#' @param .data A time series with `date` (days) and `value` cols.
 #' @param .target The name (string) of the target variable.
 #' @param .prop The proportion of data to be retained for modeling/analysis.
 #' @param .strat Logical, whether or not to conduct stratified sampling by
@@ -752,11 +752,261 @@ train_cubist_model <- function(
   auto_cube <- healthyR.ai::hai_auto_cubist(
     .data        = train,
     .rec_obj     = rec_obj,
-    .best_metric = .best_metric,
-    .tune        = .tune
+    .tune        = .tune,
+    .grid_size   = .grid_size,
+    .num_cores   = .num_cores,
+    .best_metric = .best_metric
   )
 
   best_model <- auto_cube$model_info$fitted_wflw
+
+  # Check performance
+  test_pred <- stats::predict(best_model, new_data = test)
+
+  df_test <- tibble::tibble(
+    actual = test[[.target]],
+    pred   = test_pred$.pred
+  )
+
+  mod_rmse     <- yardstick::rmse_vec(df_test$actual, df_test$pred)
+  mod_mae      <- yardstick::mae_vec(df_test$actual, df_test$pred)
+  mod_rsq_trad <- yardstick::rsq_trad_vec(df_test$actual, df_test$pred)
+  mod_acc      <- 100 - yardstick::smape_vec(df_test$actual, df_test$pred)
+
+  tb <- tibble::tibble(
+    rmse = mod_rmse |> round(2),
+    mae  = mod_mae |> round(2),
+    r2   = mod_rsq_trad |> round(2),
+    acc  = mod_acc |> round(1)
+  )
+
+  inset_tbl <- tibble::tibble(
+    x = df_test$actual[2],
+    y = df_test$pred |> max(),
+    tb = list(tb)
+  )
+
+  g <- ggplot2::ggplot(
+    data = df_test,
+    mapping = ggplot2::aes(x = actual, y = pred)
+  ) +
+    ggplot2::geom_abline(col = "green", lty = 2, lwd = 1) +
+    ggplot2::geom_point(alpha = 0.5) +
+    ggplot2::coord_fixed(ratio = 1) +
+    ggpp::geom_table(
+      data = inset_tbl,
+      ggplot2::aes(x = x, y = y, label = tb)
+    )
+
+  return(
+    list(
+      model     = best_model,
+      test_plot = g
+    )
+  )
+
+}
+
+
+#' train_xgboost_model
+#'
+#' @param .data A time series with `date` (days) and `value` cols.
+#' @param .target The name (string) of the target variable.
+#' @param .prop The proportion of data to be retained for modeling/analysis.
+#' @param .strat Logical, whether or not to conduct stratified sampling by
+#' '.target'
+#' @param .tune Default is TRUE, this will create a tuning grid and tuned
+#' workflow.
+#' @param .grid_size Default is 10.
+#' @param .num_cores Default is 1.
+#' @param .model_type Default is `regression`, can also be `classification.`
+#' @param .surrogate_model Logical, whether or not to conduct surrogate
+#' modeling, i.e., use all data to train the model.
+#'
+#' @return A list.
+#' @export
+#'
+train_xgboost_model <- function(
+    .data,
+    .target,
+    .prop            = 0.8,
+    .strat           = FALSE,
+    .tune            = TRUE,
+    .grid_size       = 10,
+    .num_cores       = 1,
+    .model_type      = "regression",
+    .surrogate_model = FALSE
+) {
+
+  # missing safety checks
+
+  f <- stats::as.formula(stringr::str_glue("{.target} ~ ."))
+  .data$date <- NULL
+
+  # Splits
+  set.seed(1)
+
+  if (!.surrogate_model) {
+
+    if (.strat) {
+      splits <- rsample::initial_split(data = .data, prop = .prop,
+                                       strata = .target)
+    } else {
+      splits <- rsample::initial_split(data = .data, prop = .prop)
+    }
+
+    train <- rsample::training(splits)
+    test  <- rsample::testing(splits)
+
+  } else { # surrogate model
+
+    pointr::ptr("train", ".data")
+    pointr::ptr("test",  ".data")
+
+  }
+
+  rec_obj <- healthyR.ai::hai_xgboost_data_prepper(train, f)
+
+  best_metric <- switch (.model_type,
+    "regression"     = "rmse",
+    "classification" = "accuracy"
+  )
+
+  auto_xgboost <- healthyR.ai::hai_auto_xgboost(
+    .data        = train,
+    .rec_obj     = rec_obj,
+    .tune        = .tune,
+    .grid_size   = .grid_size,
+    .num_cores   = .num_cores,
+    .model_type  = .model_type,
+    .best_metric = best_metric
+  )
+
+  best_model <- auto_xgboost$model_info$fitted_wflw
+
+  # Check performance
+  test_pred <- stats::predict(best_model, new_data = test)
+
+  df_test <- tibble::tibble(
+    actual = test[[.target]],
+    pred   = test_pred$.pred
+  )
+
+  mod_rmse     <- yardstick::rmse_vec(df_test$actual, df_test$pred)
+  mod_mae      <- yardstick::mae_vec(df_test$actual, df_test$pred)
+  mod_rsq_trad <- yardstick::rsq_trad_vec(df_test$actual, df_test$pred)
+  mod_acc      <- 100 - yardstick::smape_vec(df_test$actual, df_test$pred)
+
+  tb <- tibble::tibble(
+    rmse = mod_rmse |> round(2),
+    mae  = mod_mae |> round(2),
+    r2   = mod_rsq_trad |> round(2),
+    acc  = mod_acc |> round(1)
+  )
+
+  inset_tbl <- tibble::tibble(
+    x = df_test$actual[2],
+    y = df_test$pred |> max(),
+    tb = list(tb)
+  )
+
+  g <- ggplot2::ggplot(
+    data = df_test,
+    mapping = ggplot2::aes(x = actual, y = pred)
+  ) +
+    ggplot2::geom_abline(col = "green", lty = 2, lwd = 1) +
+    ggplot2::geom_point(alpha = 0.5) +
+    ggplot2::coord_fixed(ratio = 1) +
+    ggpp::geom_table(
+      data = inset_tbl,
+      ggplot2::aes(x = x, y = y, label = tb)
+    )
+
+  return(
+    list(
+      model     = best_model,
+      test_plot = g
+    )
+  )
+
+}
+
+
+#' train_mars_model
+#'
+#' @param .data A time series with `date` (days) and `value` cols.
+#' @param .target The name (string) of the target variable.
+#' @param .prop The proportion of data to be retained for modeling/analysis.
+#' @param .strat Logical, whether or not to conduct stratified sampling by
+#' '.target'
+#' @param .tune Default is TRUE, this will create a tuning grid and tuned
+#' workflow.
+#' @param .grid_size Default is 10.
+#' @param .num_cores Default is 1.
+#' @param .model_type Default is `regression`, can also be `classification.`
+#' @param .surrogate_model Logical, whether or not to conduct surrogate
+#' modeling, i.e., use all data to train the model.
+#'
+#' @return A list.
+#' @export
+#'
+train_mars_model <- function(
+    .data,
+    .target,
+    .prop            = 0.8,
+    .strat           = FALSE,
+    .tune            = TRUE,
+    .grid_size       = 10,
+    .num_cores       = 1,
+    .model_type      = "regression",
+    .surrogate_model = FALSE
+) {
+
+  # missing safety checks
+
+  f <- stats::as.formula(stringr::str_glue("{.target} ~ ."))
+  .data$date <- NULL
+
+  # Splits
+  set.seed(1)
+
+  if (!.surrogate_model) {
+
+    if (.strat) {
+      splits <- rsample::initial_split(data = .data, prop = .prop,
+                                       strata = .target)
+    } else {
+      splits <- rsample::initial_split(data = .data, prop = .prop)
+    }
+
+    train <- rsample::training(splits)
+    test  <- rsample::testing(splits)
+
+  } else { # surrogate model
+
+    pointr::ptr("train", ".data")
+    pointr::ptr("test",  ".data")
+
+  }
+
+  rec_obj <- healthyR.ai::hai_earth_data_prepper(train, f)
+
+  best_metric <- switch (.model_type,
+    "regression"     = "rmse",
+    "classification" = "accuracy"
+  )
+
+  auto_earth <- healthyR.ai::hai_auto_earth(
+    .data        = train,
+    .rec_obj     = rec_obj,
+    .tune        = .tune,
+    .grid_size   = .grid_size,
+    .num_cores   = .num_cores,
+    .model_type  = .model_type,
+    .best_metric = best_metric
+  )
+
+  best_model <- auto_earth$model_info$fitted_wflw
 
   # Check performance
   test_pred <- stats::predict(best_model, new_data = test)

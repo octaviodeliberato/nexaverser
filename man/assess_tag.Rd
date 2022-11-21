@@ -18,7 +18,7 @@ assess_tag(
 )
 }
 \arguments{
-\item{.tag_dat}{A time series with 'date' and 'value' cols.}
+\item{.tag_dat}{A time series with \code{date} and \code{value} cols.}
 
 \item{.pad}{Logical, whether or not to pad the time series.}
 

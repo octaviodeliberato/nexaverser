@@ -7,7 +7,7 @@
 impute_missing_values(.tag_dat)
 }
 \arguments{
-\item{.tag_dat}{A time series with 'date' (days) and 'value' cols.}
+\item{.tag_dat}{A time series with \code{date} (days) and \code{value} cols.}
 }
 \value{
 A data frame with imputed values.

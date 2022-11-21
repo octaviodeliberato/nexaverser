@@ -7,7 +7,7 @@
 forecast_tag(.tag_dat, .ndays = 15, .interactive = FALSE)
 }
 \arguments{
-\item{.tag_dat}{A time series with 'date' (days) and 'value' cols.}
+\item{.tag_dat}{A time series with \code{date} (days) and \code{value} cols.}
 
 \item{.ndays}{The forecasting horizon, in days.}
 
