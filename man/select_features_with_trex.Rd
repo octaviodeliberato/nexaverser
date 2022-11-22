@@ -8,7 +8,6 @@ select_features_with_trex(
   .tag_dat,
   .target,
   .balance = FALSE,
-  .with_tentative = TRUE,
   .return_data = FALSE,
   .task = "regression"
 )
@@ -19,9 +18,6 @@ select_features_with_trex(
 \item{.target}{The name (string) of the target variable.}
 
 \item{.balance}{Logical, whether or not to balance the dataset.}
-
-\item{.with_tentative}{Logical, whether or not to include the 'tentative
-features' in the selection.}
 
 \item{.return_data}{Logical, whether or not to return the dataset in the
 return object.}

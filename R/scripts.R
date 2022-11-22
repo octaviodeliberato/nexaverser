@@ -585,8 +585,6 @@ select_features_with_boruta <- function(
 #' @param .tag_dat A time series with `date` (days) and `value` cols.
 #' @param .target The name (string) of the target variable.
 #' @param .balance Logical, whether or not to balance the dataset.
-#' @param .with_tentative Logical, whether or not to include the 'tentative
-#' features' in the selection.
 #' @param .return_data Logical, whether or not to return the dataset in the
 #' return object.
 #' @param .task Either "regression" or "classification".
@@ -598,7 +596,6 @@ select_features_with_trex <- function(
     .tag_dat,
     .target,
     .balance        = FALSE,
-    .with_tentative = TRUE,
     .return_data    = FALSE,
     .task           = "regression"
 ) {
@@ -1052,5 +1049,49 @@ train_mars_model <- function(
       test_plot = g
     )
   )
+
+}
+
+
+#' coeteris_paribus
+#'
+#' @param .model A fitted model from `tidymodels`.
+#' @param .newdata A data frame.
+#' @param .target The name of the dependent variable.
+#'
+#' @return A `ggplot2` plot.
+#' @export
+#'
+coeteris_paribus <- function(
+    .model,
+    .newdata,
+    .target
+  ) {
+
+  # create custom predict function
+  pred <- function(model, newdata) {
+    results <- stats::predict(model, newdata) |> dplyr::pull(.pred)
+    return(results)
+  }
+
+  # create an explainer for the model
+  x <- setdiff(names(.newdata), .target)
+  y <- .target
+
+  explainer <- DALEX::explain(
+    model            = .model,
+    data             = .newdata[, x],
+    y                = .newdata[[y]],
+    predict_function = pred,
+    label            = "Best Fit"
+  )
+
+  # ceteris paribus analysis
+  cp <- ingredients::ceteris_paribus(explainer, utils::tail(.newdata, 1))
+  vars <- setdiff(names(.newdata), .target)
+  cp_plt <- lapply(vars, \(x) plot(cp, variables = x))
+  names(cp_plt) <- vars
+
+  return(cp_plt)
 
 }

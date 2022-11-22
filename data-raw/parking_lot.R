@@ -37,7 +37,6 @@ sel_features_2 <- nexaverser::select_features_with_trex(
   .tag_dat        = tag_imp,
   .target         = "lb_fz_filtros033silw_zn",
   .balance        = TRUE,
-  .with_tentative = TRUE,
   .return_data    = TRUE,
   .task           = "regression"
 )
@@ -45,28 +44,33 @@ sel_features_2 <- nexaverser::select_features_with_trex(
 
 # MODELING 1 --------------------------------------------------------------
 
-df <- sel_features_2$data
+df <- sel_features_2$data |>
+  dplyr::select(dplyr::all_of(c(sel_features_2$selected_features,
+                                "lb_fz_filtros033silw_zn")))
 
 tictoc::tic()
 cubist_model <- nexaverser::train_cubist_model(
   .data            = df,
   .target          = "lb_fz_filtros033silw_zn",
   .strat           = FALSE,
-  .tune            = TRUE,
+  .tune            = FALSE,
   .surrogate_model = TRUE
 )
 tictoc::toc()
 
+
 # MODELING 2 --------------------------------------------------------------
 
-df <- sel_features_2$data
+df <- sel_features_2$data |>
+  dplyr::select(dplyr::all_of(c(sel_features_2$selected_features,
+                                "lb_fz_filtros033silw_zn")))
 
 tictoc::tic()
 xgb_model <- nexaverser::train_xgboost_model(
   .data            = df,
   .target          = "lb_fz_filtros033silw_zn",
   .strat           = FALSE,
-  .tune            = TRUE,
+  .tune            = FALSE,
   .surrogate_model = TRUE
 )
 tictoc::toc()
@@ -74,13 +78,15 @@ tictoc::toc()
 
 # MODELING 3 --------------------------------------------------------------
 
-df <- sel_features_2$data
+df <- sel_features_2$data |>
+  dplyr::select(dplyr::all_of(c(sel_features_2$selected_features,
+                                "lb_fz_filtros033silw_zn")))
 
 tictoc::tic()
 mars_model <- nexaverser::train_mars_model(
   .data            = df,
   .target          = "lb_fz_filtros033silw_zn",
-  .strat           = TRUE,
+  .strat           = FALSE,
   .tune            = FALSE,
   .surrogate_model = TRUE
 )
@@ -181,3 +187,12 @@ ggplot2::ggplot(
   )
 
 h2o::h2o.shutdown(prompt = FALSE)
+
+
+# CETERIS PARIBUS ---------------------------------------------------------
+
+cp_plt <- nexaverser::coeteris_paribus(
+  .model   = xgb_model$model,
+  .newdata = df,
+  .target  = "lb_fz_filtros033silw_zn"
+)
