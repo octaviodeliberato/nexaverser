@@ -1095,3 +1095,108 @@ coeteris_paribus <- function(
   return(cp_plt)
 
 }
+
+
+#' plant_performance_map
+#'
+#' @param .model A `tidymodels` fitted model.
+#' @param .data A data frame with the training set.
+#' @param .xvar The first input.
+#' @param .yvar The second input.
+#' @param .zvar The dependent variable.
+#' @param .res 3D plot resolution.
+#'
+#' @return A plotly plot.
+#' @export
+#'
+plant_performance_map <- function(
+    .model,
+    .data,
+    .xvar,
+    .yvar,
+    .zvar,
+    .res = 16 # 3d plot resolution
+  ) {
+
+  # create custom predict function
+  pred <- function(model, newdata) {
+    results <- stats::predict(model, newdata) |> dplyr::pull(.pred)
+    return(results)
+  }
+
+  # Fixed variables from this point on:
+  row_nr <- nrow(.data)
+
+  # Given a model, predict zvar from xvar and yvar
+  # Defaults to range of x and y variables, and a 16x16 grid
+  predictgrid <- function(dat, model, xvar, yvar, zvar, row_nr = 1, res = 16) {
+    # Find the range of the predictor variable. This works for lm and glm
+    # and some others, but may require customization for others.
+    xrange <- range(dat[[xvar]])
+    yrange <- range(dat[[yvar]])
+
+    newdata <- dat[row_nr, 1:(ncol(dat) - 1)]
+    other_cols <- setdiff(names(newdata), c(xvar, yvar))
+    new_data <- expand.grid(
+      x = seq(xrange[1], xrange[2], length.out = res),
+      y = seq(yrange[1], yrange[2], length.out = res)
+    )
+    names(new_data) <- c(xvar, yvar)
+    new_data[, other_cols] <- newdata[1, other_cols]
+
+    new_data[[zvar]] <- pred(model, new_data)
+
+    new_data
+  }
+
+  # use it
+  data_grid <- predictgrid(.data, .model, .xvar, .yvar, .zvar, row_nr, .res)
+
+  # Convert long-style data frame with x, y, and z vars into a list
+  # with x and y as row/column values, and z as a matrix.
+  df2mat <- function(p, xvar = NULL, yvar = NULL, zvar = NULL) {
+    if (is.null(xvar)) xvar <- names(p)[1]
+    if (is.null(yvar)) yvar <- names(p)[2]
+    if (is.null(zvar)) zvar <- names(p)[3]
+
+    x <- unique(p[[xvar]])
+    y <- unique(p[[yvar]])
+    z <- matrix(p[[zvar]], nrow = length(y), ncol = length(x))
+
+    m <- list(x, y, z)
+    names(m) <- c(xvar, yvar, zvar)
+    m
+  }
+
+  # use it
+  data_list <- df2mat(data_grid, .xvar, .yvar, .zvar)
+
+  # * 3D Plotly Plot
+  Z <- data_list[[.zvar]]
+
+  ppm <- plotly::plot_ly(
+    x = data_list[[.xvar]],
+    y = data_list[[.yvar]],
+    z = Z
+  ) |>
+    plotly::add_surface(
+      contours = list(
+        z = list(
+          show = TRUE,
+          usecolormap = TRUE,
+          highlightcolor = "#ff0000",
+          project = list(z = TRUE)
+        )
+      )
+    ) |>
+    plotly::layout(
+      title = "Performance Map",
+      scene = list(
+        xaxis = list(title = .xvar),
+        yaxis = list(title = .yvar),
+        zaxis = list(title = .zvar))
+    )
+
+  ppm
+
+}

@@ -58,6 +58,8 @@ cubist_model <- nexaverser::train_cubist_model(
 )
 tictoc::toc()
 
+cubist_vip <- cubist_model$model$fit$fit$fit |> vip::vip()
+
 
 # MODELING 2 --------------------------------------------------------------
 
@@ -74,6 +76,8 @@ xgb_model <- nexaverser::train_xgboost_model(
   .surrogate_model = TRUE
 )
 tictoc::toc()
+
+xgb_vip <- xgb_model$model$fit$fit$fit |> vip::vip()
 
 
 # MODELING 3 --------------------------------------------------------------
@@ -196,3 +200,28 @@ cp_plt <- nexaverser::coeteris_paribus(
   .newdata = df,
   .target  = "lb_fz_filtros033silw_zn"
 )
+
+cp_plt
+
+
+# PLANT PERFORMANCE MAPS --------------------------------------------------
+
+# * Settings ----
+xvar <- xgb_vip$data$Variable[1]
+
+yvar <- xgb_vip$data$Variable[2]
+
+zvar <- "lb_fz_filtros033silw_zn"
+
+res  <- 100 # 3d plots resolution
+
+ppm <- nexaverser::plant_performance_map(
+  .model = xgb_model$model,
+  .data  = df,
+  .xvar  = xvar,
+  .yvar  = yvar,
+  .zvar  = zvar,
+  .res   = 100
+)
+
+ppm
