@@ -716,7 +716,7 @@ train_cubist_model <- function(
       call. = FALSE
     )
   } else {
-    box::use(rules[...])
+    requireNamespace("rules", quietly = TRUE)
   }
 
   f <- stats::as.formula(stringr::str_glue("{.target} ~ ."))
@@ -1198,5 +1198,83 @@ plant_performance_map <- function(
     )
 
   ppm
+
+}
+
+
+# custom mean
+my_mean <- function(x, na.rm=TRUE) {
+  mean(x, na.rm = na.rm)
+}
+
+
+#' cluster_ts
+#'
+#' @param .tag_dat A time series with `date` and `value` cols.
+#' @param .clusters The number of clusters.
+#'
+#' @return A data frame.
+#' @export
+#'
+cluster_ts <- function(
+    .tag_dat,
+    .clusters
+) {
+
+  full_data_tbl <- .tag_dat |>
+    tidyr::pivot_longer(-date)
+
+  # clustering process
+  tsfeature_tbl <- full_data_tbl |>
+    dplyr::group_by(name) |>
+    timetk::tk_tsfeatures(
+      .date_var = date,
+      .value    = value,
+      .period   = "day",
+      .features = c("frequency", "stl_features", "entropy", "acf_features",
+                    "my_mean"),
+      .scale    = TRUE,
+      .prefix   = "ts_"
+    ) |>
+    dplyr::ungroup()
+
+  set.seed(123)
+
+  cluster_tbl <- tibble::tibble(
+    cluster = tsfeature_tbl |>
+      dplyr::select(-name) |>
+      dplyr::mutate_all(tidyr::replace_na, 0) |>
+      as.matrix() |>
+      stats::kmeans(centers = .clusters, nstart = 100) |>
+      purrr::pluck("cluster")
+  ) |>
+    dplyr::bind_cols(
+      tsfeature_tbl
+    )
+
+  cluster_lookup_tbl <- cluster_tbl |>
+    dplyr::select(name, cluster) |>
+    dplyr::arrange(name)
+
+  full_data_tbl$cluster <- rep(1, nrow(full_data_tbl))
+
+  full_data_tbl$cluster <- full_data_tbl |>
+    dplyr::select(name) |>
+    as.vector() |>
+    sapply(
+      \(x) {
+        tidyquant::VLOOKUP(
+          .lookup_values = x,
+          .data          = cluster_lookup_tbl,
+          .lookup_column = name,
+          .return_column = cluster
+        )
+      }
+    ) |>
+    as.numeric()
+
+  return(
+    full_data_tbl |> purrr::set_names(c("date", "tag", "value", "cluster"))
+  )
 
 }

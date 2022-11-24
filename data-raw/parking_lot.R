@@ -196,7 +196,7 @@ h2o::h2o.shutdown(prompt = FALSE)
 # CETERIS PARIBUS ---------------------------------------------------------
 
 cp_plt <- nexaverser::coeteris_paribus(
-  .model   = xgb_model$model,
+  .model   = cubist_model$model,
   .newdata = df,
   .target  = "lb_fz_filtros033silw_zn"
 )
@@ -206,17 +206,16 @@ cp_plt
 
 # PLANT PERFORMANCE MAPS --------------------------------------------------
 
-# * Settings ----
-xvar <- xgb_vip$data$Variable[1]
+xvar <- cubist_vip$data$Variable[1]
 
-yvar <- xgb_vip$data$Variable[2]
+yvar <- cubist_vip$data$Variable[2]
 
 zvar <- "lb_fz_filtros033silw_zn"
 
 res  <- 100 # 3d plots resolution
 
 ppm <- nexaverser::plant_performance_map(
-  .model = xgb_model$model,
+  .model = cubist_model$model,
   .data  = df,
   .xvar  = xvar,
   .yvar  = yvar,
@@ -225,3 +224,8 @@ ppm <- nexaverser::plant_performance_map(
 )
 
 ppm
+
+
+# CLUSTERING --------------------------------------------------------------
+
+cluster_tbl <- nexaverser::cluster_ts(tag_imp, 4)
