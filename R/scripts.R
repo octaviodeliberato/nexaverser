@@ -588,6 +588,12 @@ select_features_with_boruta <- function(
 #' @param .return_data Logical, whether or not to return the dataset in the
 #' return object.
 #' @param .task Either "regression" or "classification".
+#' @param .corr_max Maximum allowed correlation between any two predictors
+#' from different clusters. Defaults to 0.5.
+#' @param .parallel Logical. If TRUE random experiments are executed in
+#' parallel. Defaults to FALSE.
+#' @param .max_cores Maximum number of cores to be used for parallel processing
+#' (default: min of 20 random experiments and number of physical cores).
 #'
 #' @return A list.
 #' @export
@@ -595,9 +601,12 @@ select_features_with_boruta <- function(
 select_features_with_trex <- function(
     .tag_dat,
     .target,
-    .balance        = FALSE,
-    .return_data    = FALSE,
-    .task           = "regression"
+    .balance     = FALSE,
+    .return_data = FALSE,
+    .task        = "regression",
+    .corr_max    = 0.5,
+    .parallel    = FALSE,
+    .max_cores   = min(20, max(1, parallel::detectCores(logical = FALSE) - 1))
 ) {
 
   # missing some safety checks
@@ -627,7 +636,15 @@ select_features_with_trex <- function(
 
       target <- as.matrix(dplyr::pull(df, .target))
 
-      res <- TRexSelector::trex(X = X, y = target, tFDR = 0.05, verbose = FALSE)
+      res <- TRexSelector::trex(
+        X                  = X,
+        y                  = target,
+        corr_max           = .corr_max,
+        parallel_process   = .parallel,
+        parallel_max_cores = .max_cores,
+        tFDR               = 0.05,
+        verbose            = FALSE
+      )
 
       selected_attrs <- names(df[, which(res$selected_var > eps)])
 
@@ -662,6 +679,113 @@ select_features_with_trex <- function(
     res <- TRexSelector::trex(X = X, y = target, tFDR = 0.05, verbose = FALSE)
 
     selected_attrs <- names(df[, which(res$selected_var > eps)])
+
+  }
+
+  features <- list(selected_features = selected_attrs)
+
+  if (.return_data) {
+
+    features[["data"]] <- df
+
+  }
+
+  return(features)
+
+}
+
+
+#' select_features_with_pps
+#'
+#' @param .tag_dat A time series with `date` (days) and `value` cols.
+#' @param .target The name (string) of the target variable.
+#' @param .balance Logical, whether or not to balance the dataset.
+#' @param .return_data Logical, whether or not to return the dataset in the
+#' return object.
+#' @param .task Either "regression" or "classification".
+#' @param .cutoff Predictors with PPS scores lower than `.cutoff` will be
+#' discarded.
+#' @param .parallel Logical, whether to perform score calls in parallel.
+#' @param .max_cores Maximum number of cores to use, defaults to maximum
+#' minus 1.
+#'
+#' @return A list.
+#' @export
+#'
+select_features_with_pps <- function(
+    .tag_dat,
+    .target,
+    .balance     = FALSE,
+    .return_data = FALSE,
+    .task        = "regression",
+    .cutoff      = 0.15,
+    .parallel    = FALSE,
+    .max_cores   = -1
+) {
+
+  # missing some safety checks
+
+  set.seed(1)
+
+  x <- setdiff(names(.tag_dat), c("date", .target))
+
+  df <- .tag_dat[, c(x, .target)]
+
+  if (.balance) {
+
+    if (.task == "regression") {
+
+      df <- UBL::RandOverRegress(
+        form   = stats::as.formula(stringr::str_glue("{.target} ~ .")),
+        dat    = as.data.frame(df),
+        C.perc = "balance"
+      )
+
+      selected_attrs <- ppsr::score_predictors(
+        df = df,
+        y  = .target
+      ) |>
+        tibble::as_tibble() |>
+        dplyr::arrange(dplyr::desc(pps)) |>
+        dplyr::filter(pps >= .cutoff) |>
+        dplyr::pull("x") |>
+        setdiff(x = _, y = .target)
+
+    } else { # classification
+
+      df <- UBL::RandOverClassif(
+        form   = stats::as.formula(stringr::str_glue("{.target} ~ .")),
+        dat    = as.data.frame(df),
+        C.perc = "balance"
+      )
+
+      selected_attrs <- ppsr::score_predictors(
+        df          = df,
+        y           = .target,
+        do_parallel = .parallel,
+        n_cores     = .max_cores
+      ) |>
+        tibble::as_tibble() |>
+        dplyr::arrange(dplyr::desc(pps)) |>
+        dplyr::filter(pps >= .cutoff) |>
+        dplyr::pull("x") |>
+        setdiff(x = _, y = .target)
+
+    }
+
+  } else { # don't balance the data
+
+    selected_attrs <- ppsr::score_predictors(
+      df          = df,
+      y           = .target,
+      do_parallel = .parallel,
+      n_cores     = .max_cores
+    ) |>
+      tibble::as_tibble() |>
+      dplyr::arrange(dplyr::desc(pps)) |>
+      dplyr::filter(pps >= .cutoff) |>
+      dplyr::pull("x") |>
+      setdiff(x = _, y = .target)
 
   }
 
@@ -739,8 +863,8 @@ train_cubist_model <- function(
 
   } else { # surrogate model
 
-    pointr::ptr("train", ".data")
-    pointr::ptr("test",  ".data")
+    train <- .data
+    test  <- .data
 
   }
 
@@ -857,8 +981,8 @@ train_xgboost_model <- function(
 
   } else { # surrogate model
 
-    pointr::ptr("train", ".data")
-    pointr::ptr("test",  ".data")
+    train <- .data
+    test  <- .data
 
   }
 
@@ -981,8 +1105,8 @@ train_mars_model <- function(
 
   } else { # surrogate model
 
-    pointr::ptr("train", ".data")
-    pointr::ptr("test",  ".data")
+    train <- .data
+    test  <- .data
 
   }
 
@@ -1213,7 +1337,7 @@ my_mean <- function(x, na.rm=TRUE) {
 #' @param .tag_dat A time series with `date` and `value` cols.
 #' @param .clusters The number of clusters.
 #'
-#' @return A data frame.
+#' @return A list.
 #' @export
 #'
 cluster_ts <- function(
@@ -1274,7 +1398,231 @@ cluster_ts <- function(
     as.numeric()
 
   return(
-    full_data_tbl |> purrr::set_names(c("date", "tag", "value", "cluster"))
+    full_data_tbl |>
+      purrr::set_names(c("date", "tag", "value", "cluster")) |>
+      split(~cluster)
   )
+
+}
+
+
+# calibrate_and_plot
+#
+calibrate_and_plot <- function(..., .splits, .actual_data,
+                               .show_ci = FALSE, type = "testing") {
+
+  if (type == "testing") {
+    new_data <- rsample::testing(.splits)
+  } else {
+    new_data <- rsample::training(.splits) |> tidyr::drop_na()
+  }
+
+  calibration_tbl <- modeltime::modeltime_table(...) |>
+    modeltime::modeltime_calibrate(new_data)
+
+  acc_tbl <- calibration_tbl |> modeltime::modeltime_accuracy()
+
+  fore_dat <- calibration_tbl |>
+    modeltime::modeltime_forecast(
+      new_data    = new_data,
+      actual_data = .actual_data
+    )
+
+  fore_plt <- fore_dat |>
+    modeltime::plot_modeltime_forecast(.conf_interval_show = .show_ci)
+
+  return(
+    list(
+      calibration = calibration_tbl,
+      metrics     = acc_tbl,
+      forecast    = list(data = fore_dat, plot = fore_plt)
+    )
+  )
+
+}
+
+
+#' forecast_prophet
+#'
+#' @param .tag_dat A time series with `date` and `value` cols.
+#' @param .assess The number of samples used for each assessment resample.
+#' @param .horiz The forecast horizon.
+#'
+#' @return A `parsnip` (PROPHET) model object.
+#' @export
+#'
+forecast_prophet <- function(
+  .tag_dat,
+  .assess = 1,
+  .horiz  = 1
+) {
+
+  splits <- timetk::time_series_split(
+    data       = .tag_dat,
+    date_var   = date,
+    assess     = .assess,
+    cumulative = TRUE
+  )
+
+  model_fit_prophet <- modeltime::prophet_reg() |>
+    parsnip::set_engine("prophet") |>
+    parsnip::fit(value ~ date, data = rsample::training(splits))
+
+  output <- calibrate_and_plot(model_fit_prophet, .splits = splits,
+                               .actual_data = .tag_dat)
+
+  model_refit_prophet <- output$calibration |>
+    modeltime::modeltime_refit(data = .tag_dat)
+
+  fore_dat <- model_refit_prophet |>
+    modeltime::modeltime_forecast(
+      h = .horiz,
+      actual_data = .tag_dat
+    )
+
+  fore_plt <- fore_dat |>
+    modeltime::plot_modeltime_forecast(
+      .conf_interval_show = TRUE
+    )
+
+  attr(output, "model_fit")   <- model_fit_prophet
+  attr(output, "model_refit") <- model_refit_prophet
+  attr(output, "forecast")    <- fore_dat
+  attr(output, "plot")        <- fore_plt
+
+  return(output)
+
+}
+
+
+#' forecast_nnetar
+#'
+#' @param .tag_dat A time series with `date` and `value` cols.
+#' @param .assess The number of samples used for each assessment resample.
+#' @param .horiz The forecast horizon.
+#' @param .seasonal_period A seasonal frequency. Uses "auto" by default. A
+#' character phrase of "auto" or time-based phrase of "2 weeks" can be used if
+#' a date or date-time variable is provided.
+#'
+#' @return A `parsnip` (NNAR) model object.
+#' @export
+#'
+forecast_nnetar <- function(
+    .tag_dat,
+    .assess = 1,
+    .horiz  = 1,
+    .seasonal_period = "auto"
+) {
+
+  splits <- timetk::time_series_split(
+    data       = .tag_dat,
+    date_var   = date,
+    assess     = .assess,
+    cumulative = TRUE
+  )
+
+  set.seed(123)
+  model_fit_nnetar <- modeltime::nnetar_reg(
+    seasonal_period = .seasonal_period,
+    hidden_units    = 10,
+    penalty         = 10,
+    num_networks    = 10,
+    epochs          = 100
+  ) |>
+    parsnip::set_engine("nnetar") |>
+    parsnip::fit(value ~ date, rsample::training(splits))
+
+  output <- calibrate_and_plot(model_fit_nnetar, .splits = splits,
+                               .actual_data = .tag_dat)
+
+  model_refit_nnetar <- output$calibration |>
+    modeltime::modeltime_refit(data = .tag_dat)
+
+  fore_dat <- model_refit_nnetar |>
+    modeltime::modeltime_forecast(
+      h = .horiz,
+      actual_data = .tag_dat
+    )
+
+  fore_plt <- fore_dat |>
+    modeltime::plot_modeltime_forecast(
+      .conf_interval_show = TRUE
+    )
+
+  attr(output, "model_fit")   <- model_fit_nnetar
+  attr(output, "model_refit") <- model_refit_nnetar
+  attr(output, "forecast")    <- fore_dat
+  attr(output, "plot")        <- fore_plt
+
+  return(output)
+
+}
+
+
+#' forecast_tbats
+#'
+#' @param .tag_dat A time series with `date` and `value` cols.
+#' @param .assess The number of samples used for each assessment resample.
+#' @param .horiz The forecast horizon.
+#' @param .seasonal_period_1 (required) The primary seasonal frequency. Uses
+#' "auto" by default. A character phrase of "auto" or time-based phrase of "2
+#' weeks" can be used if a date or date-time variable is provided.
+#' @param .seasonal_period_2 (optional) A second seasonal frequency. Is NULL
+#' by default. A character phrase of "auto" or time-based phrase of "2 weeks"
+#' can be used if a date or date-time variable is provided.
+#' @param .seasonal_period_3 (optional) A third seasonal frequency. Is NULL by
+#' default. A character phrase of "auto" or time-based phrase of "2 weeks" can
+#' be used if a date or date-time variable is provided.
+#'
+#' @return A `parsnip` (BATS) model object.
+#' @export
+#'
+forecast_tbats <- function(
+    .tag_dat,
+    .assess = 1,
+    .horiz  = 1,
+    .seasonal_period_1 = "auto",
+    .seasonal_period_2 = NULL,
+    .seasonal_period_3 = NULL
+) {
+
+  splits <- timetk::time_series_split(
+    data       = .tag_dat,
+    date_var   = date,
+    assess     = .assess,
+    cumulative = TRUE
+  )
+
+  model_fit_tbats <- modeltime::seasonal_reg(
+    seasonal_period_1 = .seasonal_period_1,
+    seasonal_period_2 = .seasonal_period_2,
+    seasonal_period_3 = .seasonal_period_3
+  ) |>
+    parsnip::set_engine("tbats") |>
+    parsnip::fit(value ~ date, rsample::training(splits))
+
+  output <- calibrate_and_plot(model_fit_tbats, .splits = splits,
+                               .actual_data = .tag_dat)
+
+  model_refit_tbats <- output$calibration |>
+    modeltime::modeltime_refit(data = .tag_dat)
+
+  fore_dat <- model_refit_tbats |>
+    modeltime::modeltime_forecast(
+      h = .horiz,
+      actual_data = .tag_dat
+    )
+
+  fore_plt <- fore_dat |>
+    modeltime::plot_modeltime_forecast(
+      .conf_interval_show = TRUE
+    )
+
+  attr(output, "model_fit")   <- model_fit_tbats
+  attr(output, "model_refit") <- model_refit_tbats
+  attr(output, "forecast")    <- fore_dat
+  attr(output, "plot")        <- fore_plt
+
+  return(output)
 
 }

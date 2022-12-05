@@ -1,12 +1,30 @@
-# TESTS -------------------------------------------------------------------
+# DATA --------------------------------------------------------------------
+
+WHICH_DATASET <- "RTO"
+
+if (WHICH_DATASET == "FZ") {
+  tag_tbl <- nexaverser::fz_data
+  y <- "lb_fz_filtros033silw_zn"
+} else {
+  tag_tbl <- readRDS("data-raw/rto_flotacao.rds") |>
+    dplyr::select(-x7210_lab_prod_cf_zinco_zn)
+  y <- "lab_flot_cf_wil_zn"
+}
+
+# tag_imp <- nexaverser::impute_missing_values(tag_tbl)
+
+tag_imp <- tidyr::drop_na(tag_tbl)
+
+
+# TOOLS -------------------------------------------------------------------
 
 nexaverser::fz_data |> nexaverser::plot_tag_data()
 
-df <- nexaverser::fz_data[, 1:2]
+ds <- nexaverser::fz_data[, 1:2]
 
-df |> utils::tail(120) |> nexaverser::forecast_tag()
+ds |> utils::tail(120) |> nexaverser::forecast_tag()
 
-at <- nexaverser::assess_tag(df |> utils::tail(120), .imp = TRUE,
+at <- nexaverser::assess_tag(ds |> utils::tail(120), .imp = TRUE,
                              .clean = TRUE)
 
 at$trend_data |> dplyr::select(date, value) |> utils::tail(120) |>
@@ -15,43 +33,44 @@ at$trend_data |> dplyr::select(date, value) |> utils::tail(120) |>
 
 # FEATURE SELECTION -------------------------------------------------------
 
-# data
-tag_tbl <- nexaverser::fz_data
-
-# tag_imp <- nexaverser::impute_missing_values(tag_tbl)
-
-tag_imp <- tidyr::drop_na(tag_tbl)
-
 # * Feature Selection 1 ----
 sel_features_1 <- nexaverser::select_features_with_boruta(
   .tag_dat        = tag_imp,
-  .target         = "lb_fz_filtros033silw_zn",
+  .target         = y,
   .balance        = TRUE,
-  .with_tentative = TRUE,
-  .return_data    = FALSE,
+  .with_tentative = FALSE,
+  .return_data    = TRUE,
   .task           = "regression"
 )
 
 # * Feature Selection 2 ----
 sel_features_2 <- nexaverser::select_features_with_trex(
   .tag_dat        = tag_imp,
-  .target         = "lb_fz_filtros033silw_zn",
+  .target         = y,
   .balance        = TRUE,
   .return_data    = TRUE,
   .task           = "regression"
+)
+
+# * Feature Selection 3 ----
+sel_features_3 <- nexaverser::select_features_with_pps(
+  .tag_dat     = tag_imp,
+  .target      = y,
+  .balance     = FALSE,
+  .return_data = TRUE,
+  .task        = "regression"
 )
 
 
 # MODELING 1 --------------------------------------------------------------
 
 df <- sel_features_2$data |>
-  dplyr::select(dplyr::all_of(c(sel_features_2$selected_features,
-                                "lb_fz_filtros033silw_zn")))
+  dplyr::select(dplyr::all_of(c(sel_features_2$selected_features, y)))
 
 tictoc::tic()
 cubist_model <- nexaverser::train_cubist_model(
   .data            = df,
-  .target          = "lb_fz_filtros033silw_zn",
+  .target          = y,
   .strat           = FALSE,
   .tune            = FALSE,
   .surrogate_model = TRUE
@@ -63,14 +82,13 @@ cubist_vip <- cubist_model$model$fit$fit$fit |> vip::vip()
 
 # MODELING 2 --------------------------------------------------------------
 
-df <- sel_features_2$data |>
-  dplyr::select(dplyr::all_of(c(sel_features_2$selected_features,
-                                "lb_fz_filtros033silw_zn")))
+df <- sel_features_3$data |>
+  dplyr::select(dplyr::all_of(c(sel_features_3$selected_features, y)))
 
 tictoc::tic()
 xgb_model <- nexaverser::train_xgboost_model(
   .data            = df,
-  .target          = "lb_fz_filtros033silw_zn",
+  .target          = y,
   .strat           = FALSE,
   .tune            = FALSE,
   .surrogate_model = TRUE
@@ -82,24 +100,23 @@ xgb_vip <- xgb_model$model$fit$fit$fit |> vip::vip()
 
 # MODELING 3 --------------------------------------------------------------
 
-df <- sel_features_2$data |>
-  dplyr::select(dplyr::all_of(c(sel_features_2$selected_features,
-                                "lb_fz_filtros033silw_zn")))
+df <- sel_features_3$data |>
+  dplyr::select(dplyr::all_of(c(sel_features_3$selected_features, y)))
 
 tictoc::tic()
 mars_model <- nexaverser::train_mars_model(
   .data            = df,
-  .target          = "lb_fz_filtros033silw_zn",
+  .target          = y,
   .strat           = FALSE,
   .tune            = FALSE,
   .surrogate_model = TRUE
 )
 tictoc::toc()
 
+mars_vip <- mars_model$model$fit$fit$fit |> vip::vip()
+
 
 # MODELING 4 --------------------------------------------------------------
-
-y <- "lb_fz_filtros033silw_zn"
 
 data <- df[, c(selected_vars, y)]
 
@@ -196,26 +213,33 @@ h2o::h2o.shutdown(prompt = FALSE)
 # CETERIS PARIBUS ---------------------------------------------------------
 
 cp_plt <- nexaverser::coeteris_paribus(
-  .model   = cubist_model$model,
+  .model   = xgb_model$model,
   .newdata = df,
-  .target  = "lb_fz_filtros033silw_zn"
+  .target  = y
 )
 
-cp_plt
+xvar <- xgb_vip$data$Variable[1]
+
+yvar <- xgb_vip$data$Variable[2]
+
+cp_plt[[xvar]]
+cp_plt[[yvar]]
+cp_plt$ait_44003
+cp_plt$lab_pb_ag_al_flot_bulk_zn
 
 
 # PLANT PERFORMANCE MAPS --------------------------------------------------
 
-xvar <- cubist_vip$data$Variable[1]
+xvar <- mars_vip$data$Variable[1]
 
-yvar <- cubist_vip$data$Variable[2]
+yvar <- mars_vip$data$Variable[2]
 
-zvar <- "lb_fz_filtros033silw_zn"
+zvar <- y
 
 res  <- 100 # 3d plots resolution
 
 ppm <- nexaverser::plant_performance_map(
-  .model = cubist_model$model,
+  .model = mars_model$model,
   .data  = df,
   .xvar  = xvar,
   .yvar  = yvar,
@@ -228,4 +252,214 @@ ppm
 
 # CLUSTERING --------------------------------------------------------------
 
-cluster_tbl <- nexaverser::cluster_ts(tag_imp, 4)
+clusters <- nexaverser::cluster_ts(tag_imp, 3)
+
+
+# MORE FORECASTING --------------------------------------------------------
+
+# * Data ----
+
+data_prepared_tbl <- tag_imp[, 1:2] |>
+  purrr::set_names(c("date", "value")) |>
+  dplyr::mutate(value = timetk::ts_clean_vec(value)) |>
+  tibble::as_tibble()
+
+# * Recipes ----
+
+# rec_spec <- ts_auto_recipe(
+#   .data                   = data_prepared_tbl,
+#   .date_col               = date,
+#   .pred_col               = value,
+#   .step_ts_sig            = TRUE,
+#   .step_ts_rm_misc        = TRUE,
+#   .step_ts_dummy          = TRUE,
+#   .step_ts_fourier        = TRUE,
+#   .step_ts_fourier_period = 25,
+#   .K                      = 1,
+#   .step_ts_yeo            = FALSE,
+#   .step_ts_nzv            = TRUE
+# )
+#
+# rec_spec$rec_base |> recipes::prep() |> recipes::juice() |> dplyr::glimpse()
+# rec_spec$rec_date |> recipes::prep() |> recipes::juice() |> dplyr::glimpse()
+
+# * Time series splits ----
+
+# splits <- timetk::time_series_split(
+#   data       = data_prepared_tbl,
+#   date_var   = date,
+#   assess     = "24 hours",
+#   cumulative = TRUE
+# )
+#
+# splits |>
+#   timetk::tk_time_series_cv_plan() |>
+#   timetk::plot_time_series_cv_plan(date, value)
+
+# * Basic Prophet ----
+
+prophet_fit <- nexaverser::forecast_prophet(
+  .tag_dat = data_prepared_tbl,
+  .assess  = "24 hours",
+  .horiz   = 24
+)
+
+attributes(prophet_fit)[["plot"]]
+
+# * NNETAR ----
+
+nnetar_fit <- nexaverser::forecast_nnetar(
+  .tag_dat         = data_prepared_tbl,
+  .assess          = "24 hours",
+  .horiz           = 24,
+  .seasonal_period = "auto"
+)
+
+attributes(nnetar_fit)[["plot"]]
+
+# * TBATS Model ----
+
+tbats_fit <- nexaverser::forecast_tbats(
+  .tag_dat = data_prepared_tbl,
+  .assess            = "24 hours",
+  .horiz             = 24,
+  .seasonal_period_1 = "auto"
+)
+
+attributes(tbats_fit)[["plot"]]
+
+# * STLM ETS Model ----
+
+model_fit_stlm_ets <- modeltime::seasonal_reg(
+  seasonal_period_1 = 2,
+  seasonal_period_2 = 4,
+  seasonal_period_3 = 8
+) |>
+  parsnip::set_engine("stlm_ets") |>
+  parsnip::fit(value ~ date, rsample::training(splits))
+
+model_fit_stlm_ets$fit$models$model_1$stl |> ggplot2::autoplot()
+
+calibrate_and_plot(model_fit_stlm_ets, .splits = splits,
+                   .actual_data = data_prepared_tbl)
+
+# * STLM ARIMA Model ----
+
+model_fit_stlm_arima <- modeltime::seasonal_reg(
+  seasonal_period_1 = 2,
+  seasonal_period_2 = 4,
+  seasonal_period_3 = 8
+) |>
+  parsnip::set_engine("stlm_arima") |>
+  parsnip::fit(value ~ date, rsample::training(splits))
+
+model_fit_stlm_arima
+
+calibrate_and_plot(model_fit_stlm_arima, .splits = splits,
+                   .actual_data = data_prepared_tbl)
+
+
+# EVALUATION --------------------------------------------------------------
+
+# * Modeltime ----
+
+model_tbl <- modeltime::modeltime_table(
+  model_fit_prophet,
+  model_fit_nnetar,
+  model_fit_tbats,
+  model_fit_stlm_ets,
+  model_fit_stlm_arima
+)
+
+model_tbl |>
+  modeltime::modeltime_residuals(rsample::testing(splits)) |>
+  modeltime::plot_modeltime_residuals()
+
+# * Calibration ----
+
+calibration_tbl <- model_tbl |>
+  modeltime::modeltime_calibrate(rsample::testing(splits))
+
+# * Forecast Test ----
+
+calibration_tbl |>
+  modeltime::modeltime_forecast(
+    new_data    = rsample::testing(splits),
+    actual_data = data_prepared_tbl
+  ) |>
+  modeltime::plot_modeltime_forecast(
+    .conf_interval_fill = "gray",
+    .conf_interval_alpha = 0.1
+  )
+
+# * Accuracy Test ----
+
+# calibration_tbl |> modeltime_accuracy()
+
+calibration_tbl |>
+  modeltime::modeltime_accuracy() |>
+  modeltime::table_modeltime_accuracy(resizable = TRUE, bordered = TRUE)
+
+# * Refit ----
+
+refit_tbl <- calibration_tbl |>
+  modeltime::modeltime_refit(data = data_prepared_tbl)
+
+refit_tbl |>
+  modeltime::modeltime_forecast(
+    h = 24,
+    actual_data = data_prepared_tbl
+  ) |>
+  modeltime::plot_modeltime_forecast(
+    .conf_interval_show = FALSE
+  )
+
+
+# ENSEMBLE ----------------------------------------------------------------
+
+library(modeltime.ensemble)
+
+# * Mean ----
+ensemble_fit_mean <- calibration_tbl %>%
+  ensemble_average(type = "mean")
+
+modeltime_table(
+  ensemble_fit_mean
+) %>%
+  modeltime_accuracy(testing(splits))
+
+# * Median ----
+ensemble_fit_median <- calibration_tbl %>%
+  ensemble_average("median")
+
+modeltime_table(
+  ensemble_fit_mean,
+  ensemble_fit_median
+) %>%
+  modeltime_accuracy(testing(splits))
+
+# * Weighted ----
+loadings_tbl <- calibration_tbl %>%
+  modeltime_accuracy() %>%
+  mutate(rank = min_rank(-rmse)) %>%
+  select(.model_id, rank)
+
+ensemble_fit_wt <- calibration_tbl %>%
+  ensemble_weighted(loadings = loadings_tbl$rank)
+
+ensemble_fit_wt$fit$loadings_tbl
+
+modeltime_table(
+  ensemble_fit_wt
+) %>%
+  modeltime_accuracy(testing(splits))
+
+ensemble_fit_median |>
+  modeltime_table() |>
+  modeltime_forecast(
+    h = 24,
+    actual_data = data_prepared_tbl
+  ) |>
+  plot_modeltime_forecast(
+    .conf_interval_show = FALSE
+  )

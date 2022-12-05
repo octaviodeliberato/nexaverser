@@ -12,7 +12,7 @@ cluster_ts(.tag_dat, .clusters)
 \item{.clusters}{The number of clusters.}
 }
 \value{
-A data frame.
+A list.
 }
 \description{
 cluster_ts
