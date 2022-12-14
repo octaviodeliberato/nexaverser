@@ -68,5 +68,5 @@ This will build out a couple of generic recipe objects and return those items
 in a list.
 }
 \author{
-Steven P. Sanderson II, MPH
+Octavio Deliberato Neto
 }

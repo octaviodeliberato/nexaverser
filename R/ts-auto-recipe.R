@@ -1,6 +1,6 @@
 #' Build a Time Series Recipe
 #'
-#' @author Steven P. Sanderson II, MPH
+#' @author Octavio Deliberato Neto
 #'
 #' @description Automatically builds generic time series recipe objects from a given
 #' tibble.
@@ -39,7 +39,6 @@
 #'
 #' @export
 #'
-
 ts_auto_recipe <- function(.data
                            , .date_col
                            , .pred_col

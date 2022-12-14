@@ -19,12 +19,15 @@ Imports:
     Boruta,
     ChangePointTaylor,
     DALEX,
+    dials,
     dplyr,
     ggplot2,
     ggpp,
+    hardhat,
     healthyR.ai,
     healthyR.ts,
     ingredients,
+    lmtest,
     lubridate,
     mice,
     modeltime,
@@ -47,8 +50,10 @@ Imports:
     timetk,
     trelliscopejs,
     TRexSelector,
+    tune,
     UBL,
     utils,
+    workflows,
     yardstick
 Suggests: 
     rules

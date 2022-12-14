@@ -462,7 +462,7 @@ impute_missing_values <- function(.tag_dat) {
 
   .tag_dat <- dplyr::bind_cols(ts_sig, .tag_dat)
 
-  imp <- mice::mice(data = .tag_dat, m = 5, method = "cart")
+  imp <- mice::mice(data = .tag_dat, m = 5, method = "cart", seed = 123)
 
   var_names |>
     lapply(\(x) imp[["imp"]][[x]] |> apply(1, mean)) -> .
@@ -802,6 +802,80 @@ select_features_with_pps <- function(
 }
 
 
+#' calc_p_value_granger_fit
+#'
+#' @param tag_x An univariate series of observations.
+#' @param tag_y An univariate series of observations.
+#' @param max_lag An integer specifying the order of delays to include in the
+#' auxiliary regression. Defaults to 7.
+#'
+#' @return A list.
+#' @export
+#'
+calc_p_value_granger_fit <- function(tag_x, tag_y, max_lag = 7) {
+
+  fit_granger <- vector(mode = "list", length = max_lag)
+
+  for (i in 1:max_lag) { # max lag periods
+    fit_granger[[i]] <- lmtest::grangertest(
+      tag_x,
+      tag_y,
+      order = i,
+      na.action = stats::na.omit
+    ) |>
+      purrr::pluck(4, 2)
+  }
+
+  names(fit_granger) <- sapply(
+    1:max_lag,
+    function(i) { stringr::str_glue("lag_of_{i}_days") }
+  )
+
+  return(unlist(fit_granger))
+
+}
+
+
+#' run_causation_analysis
+#'
+#' @param .tag_dat A data frame with numeric data.
+#' @param .target The name of the target (response) column.
+#' @param .max_lag An integer specifying the order of delays to include in the
+#' auxiliary regression. Defaults to 7.
+#'
+#' @return A character vector.
+#' @export
+#'
+run_causation_analysis <- function(
+    .tag_dat,
+    .target,
+    .max_lag = 7
+) {
+
+  x <- setdiff(names(.tag_dat), c("date", .target))
+
+  calc_p_value_granger_fit_safe <- purrr::possibly(calc_p_value_granger_fit,
+                                                   NULL)
+
+  causation_analysis <- lapply(
+    .tag_dat[, x]  ,
+    \(x) calc_p_value_granger_fit_safe(tag_x   = x,
+                                       tag_y   = .tag_dat[[.target]],
+                                       max_lag = .max_lag)
+  )
+
+  causation_analysis <- purrr::compact(causation_analysis)
+
+  good <- sapply(causation_analysis,
+                 \(x) { any(x < 0.05) })
+
+  probable_causes <- names(causation_analysis)[good]
+
+  return(probable_causes)
+
+}
+
+
 #' train_cubist_model
 #'
 #' @param .data A time series with `date` (days) and `value` cols.
@@ -1128,6 +1202,130 @@ train_mars_model <- function(
   )
 
   best_model <- auto_earth$model_info$fitted_wflw
+
+  # Check performance
+  test_pred <- stats::predict(best_model, new_data = test)
+
+  df_test <- tibble::tibble(
+    actual = test[[.target]],
+    pred   = test_pred$.pred
+  )
+
+  mod_rmse     <- yardstick::rmse_vec(df_test$actual, df_test$pred)
+  mod_mae      <- yardstick::mae_vec(df_test$actual, df_test$pred)
+  mod_rsq_trad <- yardstick::rsq_trad_vec(df_test$actual, df_test$pred)
+  mod_acc      <- 100 - yardstick::smape_vec(df_test$actual, df_test$pred)
+
+  tb <- tibble::tibble(
+    rmse = mod_rmse |> round(2),
+    mae  = mod_mae |> round(2),
+    r2   = mod_rsq_trad |> round(2),
+    acc  = mod_acc |> round(1)
+  )
+
+  inset_tbl <- tibble::tibble(
+    x = df_test$actual[2],
+    y = df_test$pred |> max(),
+    tb = list(tb)
+  )
+
+  g <- ggplot2::ggplot(
+    data = df_test,
+    mapping = ggplot2::aes(x = actual, y = pred)
+  ) +
+    ggplot2::geom_abline(col = "green", lty = 2, lwd = 1) +
+    ggplot2::geom_point(alpha = 0.5) +
+    ggplot2::coord_fixed(ratio = 1) +
+    ggpp::geom_table(
+      data = inset_tbl,
+      ggplot2::aes(x = x, y = y, label = tb)
+    )
+
+  return(
+    list(
+      model     = best_model,
+      test_plot = g
+    )
+  )
+
+}
+
+
+#' train_ranger_model
+#'
+#' @param .data A time series with `date` (days) and `value` cols.
+#' @param .target The name (string) of the target variable.
+#' @param .prop The proportion of data to be retained for modeling/analysis.
+#' @param .strat Logical, whether or not to conduct stratified sampling by
+#' '.target'
+#' @param .tune Default is TRUE, this will create a tuning grid and tuned
+#' workflow.
+#' @param .grid_size Default is 10.
+#' @param .num_cores Default is 1.
+#' @param .model_type Default is `regression`, can also be `classification.`
+#' @param .surrogate_model Logical, whether or not to conduct surrogate
+#' modeling, i.e., use all data to train the model.
+#'
+#' @return A list.
+#' @export
+#'
+train_ranger_model <- function(
+    .data,
+    .target,
+    .prop            = 0.8,
+    .strat           = FALSE,
+    .tune            = TRUE,
+    .grid_size       = 10,
+    .num_cores       = 1,
+    .model_type      = "regression",
+    .surrogate_model = FALSE
+) {
+
+  # missing safety checks
+
+  f <- stats::as.formula(stringr::str_glue("{.target} ~ ."))
+  .data$date <- NULL
+
+  # Splits
+  set.seed(1)
+
+  if (!.surrogate_model) {
+
+    if (.strat) {
+      splits <- rsample::initial_split(data = .data, prop = .prop,
+                                       strata = .target)
+    } else {
+      splits <- rsample::initial_split(data = .data, prop = .prop)
+    }
+
+    train <- rsample::training(splits)
+    test  <- rsample::testing(splits)
+
+  } else { # surrogate model
+
+    train <- .data
+    test  <- .data
+
+  }
+
+  rec_obj <- healthyR.ai::hai_ranger_data_prepper(train, f)
+
+  best_metric <- switch (.model_type,
+                         "regression"     = "rmse",
+                         "classification" = "accuracy"
+  )
+
+  auto_ranger <- hai_auto_ranger(
+    .data        = train,
+    .rec_obj     = rec_obj,
+    .tune        = .tune,
+    .grid_size   = .grid_size,
+    .num_cores   = .num_cores,
+    .model_type  = .model_type,
+    .best_metric = best_metric
+  )
+
+  best_model <- auto_ranger$model_info$fitted_wflw
 
   # Check performance
   test_pred <- stats::predict(best_model, new_data = test)
@@ -1620,6 +1818,85 @@ forecast_tbats <- function(
 
   attr(output, "model_fit")   <- model_fit_tbats
   attr(output, "model_refit") <- model_refit_tbats
+  attr(output, "forecast")    <- fore_dat
+  attr(output, "plot")        <- fore_plt
+
+  return(output)
+
+}
+
+
+#' forecast_stlm
+#'
+#' @param .tag_dat A time series with `date` and `value` cols.
+#' @param .assess The number of samples used for each assessment resample.
+#' @param .horiz The forecast horizon.
+#' @param .seasonal_period_1 (required) The primary seasonal frequency. Uses
+#' "auto" by default. A character phrase of "auto" or time-based phrase of "2
+#' weeks" can be used if a date or date-time variable is provided.
+#' @param .seasonal_period_2 (optional) A second seasonal frequency. Is NULL
+#' by default. A character phrase of "auto" or time-based phrase of "2 weeks"
+#' can be used if a date or date-time variable is provided.
+#' @param .seasonal_period_3 (optional) A third seasonal frequency. Is NULL by
+#' default. A character phrase of "auto" or time-based phrase of "2 weeks" can
+#' be used if a date or date-time variable is provided.
+#' @param .algo A character string for the software that should be used to fit
+#' the model, "ets" or "arima".
+#'
+#' @return A `parsnip` (STLM) model object.
+#' @export
+#'
+forecast_stlm <- function(
+    .tag_dat,
+    .assess            = 1,
+    .horiz             = 1,
+    .seasonal_period_1 = "auto",
+    .seasonal_period_2 = NULL,
+    .seasonal_period_3 = NULL,
+    .algo              = "ets"
+) {
+
+  splits <- timetk::time_series_split(
+    data       = .tag_dat,
+    date_var   = date,
+    assess     = .assess,
+    cumulative = TRUE
+  )
+
+  suffix <- switch (.algo,
+    "ets" = "ets",
+    "arima"
+  )
+
+  engine <- paste0("stlm_", suffix)
+
+  model_fit_stlm <- modeltime::seasonal_reg(
+    seasonal_period_1 = .seasonal_period_1,
+    seasonal_period_2 = .seasonal_period_2,
+    seasonal_period_3 = .seasonal_period_3
+  ) |>
+    parsnip::set_engine(engine) |>
+    parsnip::fit(value ~ date, rsample::training(splits))
+
+  output <- calibrate_and_plot(model_fit_stlm, .splits = splits,
+                               .actual_data = .tag_dat)
+
+  model_refit_stlm <- output$calibration |>
+    modeltime::modeltime_refit(data = .tag_dat)
+
+  fore_dat <- model_refit_stlm |>
+    modeltime::modeltime_forecast(
+      h = .horiz,
+      actual_data = .tag_dat
+    )
+
+  fore_plt <- fore_dat |>
+    modeltime::plot_modeltime_forecast(
+      .conf_interval_show = TRUE
+    )
+
+  attr(output, "model_fit")   <- model_fit_stlm
+  attr(output, "model_refit") <- model_refit_stlm
   attr(output, "forecast")    <- fore_dat
   attr(output, "plot")        <- fore_plt
 
