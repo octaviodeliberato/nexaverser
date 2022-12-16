@@ -4,7 +4,7 @@
 \alias{run_causation_analysis}
 \title{run_causation_analysis}
 \usage{
-run_causation_analysis(.tag_dat, .target, .max_lag = 7)
+run_causation_analysis(.tag_dat, .target, .max_lag = 7, .assess = NULL)
 }
 \arguments{
 \item{.tag_dat}{A data frame with numeric data.}
@@ -13,6 +13,8 @@ run_causation_analysis(.tag_dat, .target, .max_lag = 7)
 
 \item{.max_lag}{An integer specifying the order of delays to include in the
 auxiliary regression. Defaults to 7.}
+
+\item{.assess}{The number of samples used for each test.}
 }
 \value{
 A character vector.

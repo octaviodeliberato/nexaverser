@@ -3,41 +3,40 @@
 WHICH_DATASET <- "RTO"
 
 if (WHICH_DATASET == "FZ") {
+
   tag_tbl <- nexaverser::fz_data
+
   y <- "lb_fz_filtros033silw_zn"
+
+  # keep <- colMeans(is.na(tag_tbl)) <= 0.3
+  keep <- names(tag_tbl)
+
+  tag_imp <- tag_tbl[, keep] |>
+    utils::tail(540) |>
+    nexaverser::impute_missing_values() |>
+    purrr::map_df(\(x) {
+      if (class(x) != "Date") {
+        x <- timetk::ts_clean_vec(x)
+      } else { x }
+    })
+
 } else {
+
   tag_tbl <- readRDS("data-raw/rto_flotacao.rds") |>
     dplyr::select(-x7210_lab_prod_cf_zinco_zn)
+
   y <- "lab_flot_cf_wil_zn"
+
+  keep <- names(tag_tbl)
+
+  tag_imp <- tag_tbl[, keep] |>
+    purrr::map_df(\(x) {
+      if (class(x)[1] == "numeric") {
+        x <- timetk::ts_clean_vec(x)
+      } else { x }
+    })
+
 }
-
-# tag_imp <- nexaverser::impute_missing_values(tag_tbl)
-
-# keep <- colMeans(is.na(tag_tbl)) <= 0.3
-
-## START FZ
-keep <- names(tag_tbl)
-
-tag_imp <- tag_tbl[, keep] |>
-  utils::tail(540) |>
-  nexaverser::impute_missing_values() |>
-  purrr::map_df(\(x) {
-    if (class(x) != "Date") {
-      x <- timetk::ts_clean_vec(x)
-    } else { x }
-  })
-## END FZ
-
-## START RTO
-keep <- names(tag_tbl)
-
-tag_imp <- tag_tbl[, keep] |>
-  purrr::map_df(\(x) {
-    if (class(x)[1] == "numeric") {
-      x <- timetk::ts_clean_vec(x)
-    } else { x }
-  })
-## END RTO
 
 tag_imp |> nexaverser::plot_tag_data()
 
@@ -91,7 +90,7 @@ sel_features_3 <- nexaverser::select_features_with_pps(
 sel_features_4 <- nexaverser::run_causation_analysis(
   .tag_dat = tag_imp,
   .target  = y,
-  .max_lag = 7
+  .max_lag = 15
 )
 
 sel_features_5 <- nexaverser::select_features_with_trex(
@@ -121,6 +120,23 @@ cubist_model <- nexaverser::train_cubist_model(
 tictoc::toc()
 
 cubist_vip <- cubist_model$model$fit$fit$fit |> vip::vip()
+
+# 2nd round
+xvar <- cubist_vip$data$Variable[1]
+
+yvar <- cubist_vip$data$Variable[2]
+
+tictoc::tic()
+cubist_model_2d <- nexaverser::train_cubist_model(
+  .data            = df[, c(xvar, yvar, y)],
+  .target          = y,
+  .strat           = FALSE,
+  .tune            = FALSE,
+  .surrogate_model = FALSE
+)
+tictoc::toc()
+
+cubist_model_2d$model$fit$fit$fit |> vip::vip()
 
 
 # MODELING 2 --------------------------------------------------------------
@@ -308,11 +324,11 @@ h2o::h2o.shutdown(prompt = FALSE)
 
 # MODEL ANALYSIS ----------------------------------------------------------
 
-model   <- rf_model_2d$model
-var_imp <- rf_vip
+model   <- cubist_model_2d$model
+var_imp <- cubist_vip
 
 
-# CETERIS PARIBUS ---------------------------------------------------------
+# * CETERIS PARIBUS -------------------------------------------------------
 
 xvar <- var_imp$data$Variable[1]
 
@@ -328,7 +344,7 @@ cp_plt[[xvar]]
 cp_plt[[yvar]]
 
 
-# PLANT PERFORMANCE MAPS --------------------------------------------------
+# * PLANT PERFORMANCE MAPS ------------------------------------------------
 
 xvar <- var_imp$data$Variable[1]
 
@@ -348,6 +364,139 @@ ppm <- nexaverser::plant_performance_map(
 )
 
 ppm
+
+
+# * OPTIMIZATION ----------------------------------------------------------
+
+# ** Setup ----
+
+n <- 16
+## to define a grid
+x <- seq(min(df[[xvar]]), max(df[[xvar]]), length.out = n)
+y <- seq(min(df[[yvar]]), max(df[[yvar]]), length.out = n)
+## create custom predict function
+pred <- function(x) {
+
+  newdata <- t(x) |>
+    as.data.frame() |>
+    purrr::set_names(xvar, yvar)
+
+  results <- stats::predict(model, newdata) |> dplyr::pull(.pred)
+
+  return(results)
+}
+
+pred(c(x[1], y[1]))
+## evaluate on each grid point
+xy <- expand.grid(x, y)
+
+library(future.apply)
+plan(multisession)
+
+tictoc::tic()
+z <- future.apply::future_apply(
+  X        = xy,
+  MARGIN   = 1,
+  FUN      = pred,
+  simplify = TRUE
+)
+tictoc::toc()
+
+plan(sequential)
+
+z
+
+# ** General Purpose Methods ----
+
+## wrapper for all methods of optim
+optims <- function(x, x0, meth = "Nelder-Mead", lb = -Inf, ub = Inf) {
+  sol <- matrix(ncol = 3, nrow = 21)
+  sol[1, ] <- c(x0, pred(x0))
+  for (i in 2:20) {
+    S <- optim(par = x0, pred, method = meth,
+               lower = lb, upper = ub,
+               control = list(maxit = i))
+    sol[i, ] <- c(S$par, S$value)
+  }
+  S <- optim(par = x0, pred, method = meth,
+             lower = lb, upper = ub,
+             control = list(maxit = 100))
+  sol[21, ] <- c(S$par, S$value)
+  points(x0[1], x0[2], pch = 20, cex = 2)
+  points(sol[21, 1], sol[21, 2], pch = 20, col = "red", cex = 3)
+  lines(sol[, 1], sol[, 2], type = "o", pch = 3)
+  return(sol)
+}
+
+## plot lines for all methods
+lower <- apply(xy, 2, min)
+upper <- apply(xy, 2, max)
+par(mar = c(4, 4, 0.5, 0.5))
+contour(x, y,  matrix(z, length(x)), xlab = "x", ylab = "y", nlevels = 20)
+xo <- c(36, 25) # starting point
+optims(x0 = xo)  # Nelder-Mead
+optims("L-BFGS-B", x0 = xo, lb = lower, ub = upper)
+optims("SANN", x0 = xo)
+optims("Brent", x0 = xo, lb = lower, ub = upper)
+
+# ** COBYLA ----
+library(nloptr)
+
+## wrapper for COBYLA
+cobylas <- function(x, x0, lb = -Inf, ub = Inf) {
+  sol <- matrix(ncol = 3, nrow = 21)
+  sol[1, ] <- c(x0, pred(x0))
+  for (i in 2:20) {
+    S <- cobyla(x0 = x0, fn = pred, lower = lb, upper = ub,
+                control=list(maxeval = i))
+    sol[i, ] <- c(S$par, S$value)
+  }
+  S <- cobyla(x0 = x0, fn = pred, lower = lb, upper = ub,
+              control=list(maxeval = 21))
+  sol[21, ] <- c(S$par, S$value)
+  points(x0[1], x0[2], pch = 20, cex = 2)
+  points(sol[21, 1], sol[21, 2], pch = 20, col = "red", cex = 3)
+  lines(sol[, 1], sol[, 2], type = "o", pch = 3)
+  return(sol)
+}
+
+## plot lines for all methods
+lower <- apply(xy, 2, min)
+upper <- apply(xy, 2, max)
+par(mar = c(4, 4, 0.5, 0.5))
+contour(x, y,  matrix(z, length(x)), xlab = "x", ylab = "y", nlevels = 20)
+xo <- c(700.0, 3.6) # starting point
+sol_cobyla <- cobylas(x0 = xo, lb = lower, ub = upper)
+sol_cobyla
+xo <- c(1200.0, 3.7) # starting point
+sol_cobyla <- cobylas(x0 = xo, lb = lower, ub = upper)
+sol_cobyla
+
+# ** Jaya ----
+library(Jaya)
+
+## wrapper for Jaya
+victory <- function(x, lb = -Inf, ub = Inf, opt = "minimize") {
+  sol <- matrix(ncol = 3, nrow = 21)
+  for (i in 1:20) {
+    sol[i, ] <- jaya(fun = pred, lower = lb, upper = ub, maxiter = i,
+                     n_var = 2, opt = opt)$best |> as.matrix()
+  }
+  sol[21, ] <- jaya(fun = pred, lower = lb, upper = ub, maxiter = 21,
+                    n_var = 2, opt = opt)$best |> as.matrix()
+  points(sol[1, 1], sol[1, 2], pch = 20, cex = 2)
+  points(sol[21, 1], sol[21, 2], pch = 20, col = "red", cex = 3)
+  lines(sol[, 1], sol[, 2], type = "o", pch = 3)
+  return(sol)
+}
+
+## plot lines for all methods
+lower <- apply(xy, 2, min)
+upper <- apply(xy, 2, max)
+par(mar = c(4, 4, 0.5, 0.5))
+contour(x, y,  matrix(z, length(x)), xlab = "x", ylab = "y", nlevels = 20)
+sol_jaya <- victory(lb = lower, ub = upper, opt = "maximize")
+sol_jaya
 
 
 # CLUSTERING --------------------------------------------------------------
@@ -557,136 +706,3 @@ ensemble_fit_median |>
   plot_modeltime_forecast(
     .conf_interval_show = FALSE
   )
-
-
-# OPTIMIZATION ------------------------------------------------------------
-
-# * Setup ----
-
-n <- 16
-## to define a grid
-x <- seq(min(df[[xvar]]), max(df[[xvar]]), length.out = n)
-y <- seq(min(df[[yvar]]), max(df[[yvar]]), length.out = n)
-## create custom predict function
-pred <- function(x) {
-
-  newdata <- t(x) |>
-    as.data.frame() |>
-    purrr::set_names(xvar, yvar)
-
-  results <- stats::predict(model, newdata) |> dplyr::pull(.pred)
-
-  return(results)
-}
-
-pred(c(x[1], y[1]))
-## evaluate on each grid point
-xy <- expand.grid(x, y)
-
-library(future.apply)
-plan(multisession)
-
-tictoc::tic()
-z <- future.apply::future_apply(
-  X        = xy,
-  MARGIN   = 1,
-  FUN      = pred,
-  simplify = TRUE
-)
-tictoc::toc()
-
-plan(sequential)
-
-z
-
-# * General Purpose Methods ----
-
-## wrapper for all methods of optim
-optims <- function(x, x0, meth = "Nelder-Mead", lb = -Inf, ub = Inf) {
-  sol <- matrix(ncol = 3, nrow = 21)
-  sol[1, ] <- c(x0, pred(x0))
-  for (i in 2:20) {
-    S <- optim(par = x0, pred, method = meth,
-               lower = lb, upper = ub,
-               control = list(maxit = i))
-    sol[i, ] <- c(S$par, S$value)
-  }
-  S <- optim(par = x0, pred, method = meth,
-             lower = lb, upper = ub,
-             control = list(maxit = 100))
-  sol[21, ] <- c(S$par, S$value)
-  points(x0[1], x0[2], pch = 20, cex = 2)
-  points(sol[21, 1], sol[21, 2], pch = 20, col = "red", cex = 3)
-  lines(sol[, 1], sol[, 2], type = "o", pch = 3)
-  return(sol)
-}
-
-## plot lines for all methods
-lower <- apply(xy, 2, min)
-upper <- apply(xy, 2, max)
-par(mar = c(4, 4, 0.5, 0.5))
-contour(x, y,  matrix(z, length(x)), xlab = "x", ylab = "y", nlevels = 20)
-xo <- c(3.6, 5000.0) # starting point
-optims(x0 = xo)  # Nelder-Mead
-optims("L-BFGS-B", x0 = xo, lb = lower, ub = upper)
-optims("SANN", x0 = xo)
-optims("Brent", x0 = xo, lb = lower, ub = upper)
-
-# * COBYLA ----
-library(nloptr)
-
-## wrapper for COBYLA
-cobylas <- function(x, x0, lb = -Inf, ub = Inf) {
-  sol <- matrix(ncol = 3, nrow = 21)
-  sol[1, ] <- c(x0, pred(x0))
-  for (i in 2:20) {
-    S <- cobyla(x0 = x0, fn = pred, lower = lb, upper = ub,
-                control=list(maxeval = i))
-    sol[i, ] <- c(S$par, S$value)
-  }
-  S <- cobyla(x0 = x0, fn = pred, lower = lb, upper = ub,
-              control=list(maxeval = 21))
-  sol[21, ] <- c(S$par, S$value)
-  points(x0[1], x0[2], pch = 20, cex = 2)
-  points(sol[21, 1], sol[21, 2], pch = 20, col = "red", cex = 3)
-  lines(sol[, 1], sol[, 2], type = "o", pch = 3)
-  return(sol)
-}
-
-## plot lines for all methods
-lower <- apply(xy, 2, min)
-upper <- apply(xy, 2, max)
-par(mar = c(4, 4, 0.5, 0.5))
-contour(x, y,  matrix(z, length(x)), xlab = "x", ylab = "y", nlevels = 20)
-xo <- c(700.0, 3.6) # starting point
-sol_cobyla <- cobylas(x0 = xo, lb = lower, ub = upper)
-sol_cobyla
-xo <- c(1200.0, 3.7) # starting point
-sol_cobyla <- cobylas(x0 = xo, lb = lower, ub = upper)
-sol_cobyla
-
-# * Jaya ----
-library(Jaya)
-
-## wrapper for Jaya
-victory <- function(x, lb = -Inf, ub = Inf) {
-  sol <- matrix(ncol = 3, nrow = 21)
-  for (i in 1:20) {
-    sol[i, ] <- jaya(fun = pred, lower = lb, upper = ub, maxiter = i,
-                     n_var = 2, opt = "minimize")$best |> as.matrix()
-  }
-  sol[21, ] <- jaya(fun = pred, lower = lb, upper = ub, maxiter = 21,
-                    n_var = 2, opt = "minimize")$best |> as.matrix()
-  points(sol[1, 1], sol[1, 2], pch = 20, cex = 2)
-  points(sol[21, 1], sol[21, 2], pch = 20, col = "red", cex = 3)
-  lines(sol[, 1], sol[, 2], type = "o", pch = 3)
-  return(sol)
-}
-
-## plot lines for all methods
-lower <- apply(xy, 2, min)
-upper <- apply(xy, 2, max)
-par(mar = c(4, 4, 0.5, 0.5))
-contour(x, y,  matrix(z, length(x)), xlab = "x", ylab = "y", nlevels = 20)
-sol_jaya <- victory(lb = lower, ub = upper)
-sol_jaya
