@@ -1757,6 +1757,254 @@ train_c50_model <- function(
 }
 
 
+#' train_svm_rbf_model
+#'
+#' @param .data A time series with `date` (days) and `value` cols.
+#' @param .target The name (string) of the target variable.
+#' @param .prop The proportion of data to be retained for modeling/analysis.
+#' @param .strat Logical, whether or not to conduct stratified sampling by
+#' '.target'
+#' @param .tune Default is TRUE, this will create a tuning grid and tuned
+#' workflow.
+#' @param .grid_size Default is 10.
+#' @param .num_cores Default is 1.
+#' @param .model_type Default is `regression`, can also be `classification.`
+#' @param .surrogate_model Logical, whether or not to conduct surrogate
+#' modeling, i.e., use all data to train the model.
+#'
+#' @return A list.
+#' @export
+#'
+train_svm_rbf_model <- function(
+    .data,
+    .target,
+    .prop            = 0.8,
+    .strat           = FALSE,
+    .tune            = TRUE,
+    .grid_size       = 10,
+    .num_cores       = 1,
+    .model_type      = "regression",
+    .surrogate_model = FALSE
+) {
+
+  # missing safety checks
+
+  f <- stats::as.formula(stringr::str_glue("{.target} ~ ."))
+  .data$date <- NULL
+
+  # Splits
+  set.seed(1)
+
+  if (!.surrogate_model) {
+
+    if (.strat) {
+      splits <- rsample::initial_split(data = .data, prop = .prop,
+                                       strata = .target)
+    } else {
+      splits <- rsample::initial_split(data = .data, prop = .prop)
+    }
+
+    train <- rsample::training(splits)
+    test  <- rsample::testing(splits)
+
+  } else { # surrogate model
+
+    train <- .data
+    test  <- .data
+
+  }
+
+  rec_obj <- healthyR.ai::hai_svm_rbf_data_prepper(train, f)
+
+  best_metric <- switch (.model_type,
+                         "regression"     = "rmse",
+                         "classification" = "accuracy"
+  )
+
+  auto_svm <- healthyR.ai::hai_auto_svm_rbf(
+    .data        = train,
+    .rec_obj     = rec_obj,
+    .tune        = .tune,
+    .grid_size   = .grid_size,
+    .num_cores   = .num_cores,
+    .model_type  = .model_type,
+    .best_metric = best_metric
+  )
+
+  best_model <- auto_svm$model_info$fitted_wflw
+
+  # Check performance
+  test_pred <- stats::predict(best_model, new_data = test)
+
+  df_test <- tibble::tibble(
+    actual = test[[.target]],
+    pred   = test_pred$.pred
+  )
+
+  mod_rmse     <- yardstick::rmse_vec(df_test$actual, df_test$pred)
+  mod_mae      <- yardstick::mae_vec(df_test$actual, df_test$pred)
+  mod_rsq_trad <- yardstick::rsq_trad_vec(df_test$actual, df_test$pred)
+  mod_acc      <- 100 - yardstick::smape_vec(df_test$actual, df_test$pred)
+
+  tb <- tibble::tibble(
+    rmse = mod_rmse |> round(2),
+    mae  = mod_mae |> round(2),
+    r2   = mod_rsq_trad |> round(2),
+    acc  = mod_acc |> round(1)
+  )
+
+  inset_tbl <- tibble::tibble(
+    x = df_test$actual[2],
+    y = df_test$pred |> max(),
+    tb = list(tb)
+  )
+
+  g <- ggplot2::ggplot(
+    data = df_test,
+    mapping = ggplot2::aes(x = actual, y = pred)
+  ) +
+    ggplot2::geom_abline(col = "green", lty = 2, lwd = 1) +
+    ggplot2::geom_point(alpha = 0.5) +
+    ggplot2::coord_fixed(ratio = 1) +
+    ggpp::geom_table(
+      data = inset_tbl,
+      ggplot2::aes(x = x, y = y, label = tb)
+    )
+
+  return(
+    list(
+      model     = best_model,
+      test_plot = g
+    )
+  )
+
+}
+
+
+#' train_svm_poly_model
+#'
+#' @param .data A time series with `date` (days) and `value` cols.
+#' @param .target The name (string) of the target variable.
+#' @param .prop The proportion of data to be retained for modeling/analysis.
+#' @param .strat Logical, whether or not to conduct stratified sampling by
+#' '.target'
+#' @param .tune Default is TRUE, this will create a tuning grid and tuned
+#' workflow.
+#' @param .grid_size Default is 10.
+#' @param .num_cores Default is 1.
+#' @param .model_type Default is `regression`, can also be `classification.`
+#' @param .surrogate_model Logical, whether or not to conduct surrogate
+#' modeling, i.e., use all data to train the model.
+#'
+#' @return A list.
+#' @export
+#'
+train_svm_poly_model <- function(
+    .data,
+    .target,
+    .prop            = 0.8,
+    .strat           = FALSE,
+    .tune            = TRUE,
+    .grid_size       = 10,
+    .num_cores       = 1,
+    .model_type      = "regression",
+    .surrogate_model = FALSE
+) {
+
+  # missing safety checks
+
+  f <- stats::as.formula(stringr::str_glue("{.target} ~ ."))
+  .data$date <- NULL
+
+  # Splits
+  set.seed(1)
+
+  if (!.surrogate_model) {
+
+    if (.strat) {
+      splits <- rsample::initial_split(data = .data, prop = .prop,
+                                       strata = .target)
+    } else {
+      splits <- rsample::initial_split(data = .data, prop = .prop)
+    }
+
+    train <- rsample::training(splits)
+    test  <- rsample::testing(splits)
+
+  } else { # surrogate model
+
+    train <- .data
+    test  <- .data
+
+  }
+
+  rec_obj <- healthyR.ai::hai_svm_poly_data_prepper(train, f)
+
+  best_metric <- switch (.model_type,
+                         "regression"     = "rmse",
+                         "classification" = "accuracy"
+  )
+
+  auto_svm <- healthyR.ai::hai_auto_svm_poly(
+    .data        = train,
+    .rec_obj     = rec_obj,
+    .tune        = .tune,
+    .grid_size   = .grid_size,
+    .num_cores   = .num_cores,
+    .model_type  = .model_type,
+    .best_metric = best_metric
+  )
+
+  best_model <- auto_svm$model_info$fitted_wflw
+
+  # Check performance
+  test_pred <- stats::predict(best_model, new_data = test)
+
+  df_test <- tibble::tibble(
+    actual = test[[.target]],
+    pred   = test_pred$.pred
+  )
+
+  mod_rmse     <- yardstick::rmse_vec(df_test$actual, df_test$pred)
+  mod_mae      <- yardstick::mae_vec(df_test$actual, df_test$pred)
+  mod_rsq_trad <- yardstick::rsq_trad_vec(df_test$actual, df_test$pred)
+  mod_acc      <- 100 - yardstick::smape_vec(df_test$actual, df_test$pred)
+
+  tb <- tibble::tibble(
+    rmse = mod_rmse |> round(2),
+    mae  = mod_mae |> round(2),
+    r2   = mod_rsq_trad |> round(2),
+    acc  = mod_acc |> round(1)
+  )
+
+  inset_tbl <- tibble::tibble(
+    x = df_test$actual[2],
+    y = df_test$pred |> max(),
+    tb = list(tb)
+  )
+
+  g <- ggplot2::ggplot(
+    data = df_test,
+    mapping = ggplot2::aes(x = actual, y = pred)
+  ) +
+    ggplot2::geom_abline(col = "green", lty = 2, lwd = 1) +
+    ggplot2::geom_point(alpha = 0.5) +
+    ggplot2::coord_fixed(ratio = 1) +
+    ggpp::geom_table(
+      data = inset_tbl,
+      ggplot2::aes(x = x, y = y, label = tb)
+    )
+
+  return(
+    list(
+      model     = best_model,
+      test_plot = g
+    )
+  )
+
+}
+
+
 #' coeteris_paribus
 #'
 #' @param .model A fitted model from `tidymodels`.
