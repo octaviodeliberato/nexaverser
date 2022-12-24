@@ -4,7 +4,15 @@
 \alias{plant_performance_map}
 \title{plant_performance_map}
 \usage{
-plant_performance_map(.model, .data, .xvar, .yvar, .zvar, .res = 16)
+plant_performance_map(
+  .model,
+  .data,
+  .xvar,
+  .yvar,
+  .zvar,
+  .res = 16,
+  .use_rgl = FALSE
+)
 }
 \arguments{
 \item{.model}{A \code{tidymodels} fitted model.}
@@ -18,9 +26,12 @@ plant_performance_map(.model, .data, .xvar, .yvar, .zvar, .res = 16)
 \item{.zvar}{The dependent variable.}
 
 \item{.res}{3D plot resolution.}
+
+\item{.use_rgl}{Boolean. If TRUE, a 3D plot is produced by the \code{{rgl}}
+package.}
 }
 \value{
-A plotly plot.
+A \code{plotly} plot.
 }
 \description{
 plant_performance_map

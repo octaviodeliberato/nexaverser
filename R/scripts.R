@@ -1809,8 +1809,10 @@ coeteris_paribus <- function(
 #' @param .yvar The second input.
 #' @param .zvar The dependent variable.
 #' @param .res 3D plot resolution.
+#' @param .use_rgl Boolean. If TRUE, a 3D plot is produced by the `{rgl}`
+#' package.
 #'
-#' @return A plotly plot.
+#' @return A `plotly` plot.
 #' @export
 #'
 plant_performance_map <- function(
@@ -1819,7 +1821,8 @@ plant_performance_map <- function(
     .xvar,
     .yvar,
     .zvar,
-    .res = 16 # 3d plot resolution
+    .res = 16, # 3d plot resolution
+    .use_rgl = FALSE # just return the plotly plot
   ) {
 
   # create custom predict function
@@ -1875,7 +1878,7 @@ plant_performance_map <- function(
   # use it
   data_list <- df2mat(data_grid, .xvar, .yvar, .zvar)
 
-  # * 3D Plotly Plot
+  # * 3D Plots
   Z <- data_list[[.zvar]]
 
   ppm <- plotly::plot_ly(
@@ -1901,7 +1904,41 @@ plant_performance_map <- function(
         zaxis = list(title = .zvar))
     )
 
-  ppm
+  if (.use_rgl) {
+
+    # Make the plot with the data points
+    rgl::plot3d(data_list[[.xvar]], data_list[[.yvar]], data_list[[.zvar]],
+                xlab = "", ylab = "", zlab = "", axes = FALSE, type = "n")
+
+    # Add the mesh of predicted values
+    color <- rev(grDevices::rainbow(.res, start = 0/6, end = 4/6))
+    zcol  <- cut(data_list[[.zvar]], .res)
+    rgl::persp3d(data_list[[.xvar]], data_list[[.yvar]], data_list[[.zvar]],
+                 aspect = c(1, 1, 1), col = color[zcol],
+                 xlab = "", ylab = "", zlab = "",
+                 polygon_offset = 1)
+
+    # Draw the box
+    rgl::rgl.bbox(color    = "grey50",          # grey60 surface and black text
+                  emission = "grey50",          # emission color is grey50
+                  xlen = 0, ylen = 0, zlen = 0) # Don't add tick marks
+
+    # Set default color of future objects to black
+    rgl::rgl.material(color = "black")
+
+    # Add axes to specific sides: "x--", "x-+", "x+-" and "x++
+    rgl::axes3d(edges = c("x--", "y+-", "z--"),
+                ntick = 6,   # Attempt 6 tick marks on each side
+                cex   = .75) # Smaller font
+
+    # Add axis labels. 'line' specifies how far to set the label from the axis.
+    rgl::mtext3d(.xvar, edge = "x--", line = 4)
+    rgl::mtext3d(.yvar, edge = "y+-", line = 4)
+    rgl::mtext3d(.zvar, edge = "z--", line = 4)
+
+  }
+
+  return(ppm)
 
 }
 

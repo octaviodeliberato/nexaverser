@@ -93,7 +93,7 @@ sel_features_4 <- nexaverser::run_causation_analysis(
   .max_lag = 15
 )
 
-sel_features_5 <- nexaverser::select_features_with_trex(
+sel_features <- nexaverser::select_features_with_trex(
   .tag_dat        = tag_imp[, c(sel_features_4, y)],
   .target         = y,
   .balance        = TRUE,
@@ -101,7 +101,7 @@ sel_features_5 <- nexaverser::select_features_with_trex(
   .task           = "regression"
 )
 
-sel_features <- sel_features_5
+# sel_features <- sel_features_4
 
 
 # MODELING 1 --------------------------------------------------------------
@@ -324,7 +324,7 @@ h2o::h2o.shutdown(prompt = FALSE)
 
 # MODEL ANALYSIS ----------------------------------------------------------
 
-model   <- cubist_model_2d$model
+model   <- cubist_model$model # global var to pred
 var_imp <- cubist_vip
 
 
@@ -366,6 +366,9 @@ ppm <- nexaverser::plant_performance_map(
 ppm
 
 
+
+
+
 # * OPTIMIZATION ----------------------------------------------------------
 
 # ** Setup ----
@@ -384,6 +387,7 @@ pred <- function(x) {
   results <- stats::predict(model, newdata) |> dplyr::pull(.pred)
 
   return(results)
+
 }
 
 pred(c(x[1], y[1]))
@@ -497,6 +501,55 @@ par(mar = c(4, 4, 0.5, 0.5))
 contour(x, y,  matrix(z, length(x)), xlab = "x", ylab = "y", nlevels = 20)
 sol_jaya <- victory(lb = lower, ub = upper, opt = "maximize")
 sol_jaya
+
+# ** Jaya, more complex problem ----
+
+model   <- cubist_model$model # global var to pred
+lower <- apply(df |> dplyr::select(-lab_flot_cf_wil_zn), 2, min)
+upper <- apply(df |> dplyr::select(-lab_flot_cf_wil_zn), 2, max)
+
+## create custom predict function
+pred <- function(x) {
+
+  newdata <- t(x) |>
+    as.data.frame() |>
+    purrr::set_names(
+      c("fit_34_006",
+        "x7210_fit_81_003_vm",
+        "lab_flot_uc_cf_wil_zn",
+        "x7210_pid_lic_081_005_pv",
+        "ait_34_002",
+        "ait_81_001",
+        "lit_34_003",
+        "lit_34_004",
+        "lit_44003",
+        "lit_81_003b",
+        "lab_pb_ag_pb_flot_sel_pb_ag_pb")
+    )
+
+  results <- stats::predict(model, newdata) |> dplyr::pull(.pred)
+
+  return(results)
+
+}
+
+S <- jaya(fun = pred, lower = lower, upper = upper, maxiter = 21,
+          n_var = length(lower), opt = "maximize")
+
+names(S$best) <- names(df)
+S$best |> dplyr::as_tibble() |> View()
+
+# ** CEIM ----
+
+library(RCEIM)
+
+tictoc::tic()
+po <- ceimOpt(OptimFunction="pred", maxIter=21, epsilon=0.3,
+              nParams=length(lower), verbose=TRUE,
+              boundaries = cbind(lower, upper))
+tictoc::toc()
+
+po$BestMember
 
 
 # CLUSTERING --------------------------------------------------------------

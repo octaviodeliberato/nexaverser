@@ -8,7 +8,7 @@ Description: \code{nexaverser} provides tag analysis tools for plant optimizatio
 License: MIT + file LICENSE
 Encoding: UTF-8
 Roxygen: list(markdown = TRUE)
-RoxygenNote: 7.2.1
+RoxygenNote: 7.2.3
 Depends: 
     R (>= 4.1)
 URL: https://github.com/octaviodeliberato/nexaverser
@@ -23,6 +23,7 @@ Imports:
     dplyr,
     ggplot2,
     ggpp,
+    grDevices,
     hardhat,
     healthyR.ai,
     healthyR.ts,
@@ -38,6 +39,7 @@ Imports:
     qcc,
     qicharts2,
     recipes,
+    rgl,
     rlang,
     rsample,
     scales,
