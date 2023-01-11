@@ -20,8 +20,11 @@
 #'   \item{lx_li_claro_s026a}{Nivel de claro espessador S026A}
 #'   \item{lx_fit_022_h}{Vazao da purga do espessador S026A}
 #'   \item{lx_b022_h}{acidez TQ 21}
-#'   \item{lx_b021_fe_t}{Ferro Total B021}
 #'   \item{lx_b043_fet}{Ferro Total B043}
+#'   \item{lx_l1t07}{Temperatura do tanque 023}
+#'   \item{lx_l2t03}{Temperatura do tanque 022}
+#'   \item{lx_l2t10}{Temperatura do tanque 020}
+#'   \item{lx_l3t05}{Temperatura do tanque 043}
 #'   \item{lb_fz_filtros033silw_zn}{Teor de Zinco na Torta do Filtro S033}
 #' }
 #' @source \url{www.aggxtream.com}

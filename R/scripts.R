@@ -458,7 +458,8 @@ impute_missing_values <- function(.tag_dat) {
 
   var_names <- names(.tag_dat)
 
-  ts_sig <- timetk::tk_get_timeseries_signature(dates)
+  ts_sig <- timetk::tk_get_timeseries_signature(dates) |>
+    dplyr::select(-index)
 
   .tag_dat <- dplyr::bind_cols(ts_sig, .tag_dat)
 
@@ -2194,6 +2195,175 @@ plant_performance_map <- function(
 # custom mean
 my_mean <- function(x, na.rm=TRUE) {
   mean(x, na.rm = na.rm)
+}
+
+
+#' optimize_with_jaya
+#'
+#' @param .model A `parsnip` trained model or `workflow`.
+#' @param .vars A character vector with the names of the input variables.
+#' @param .lower A vector of lower bounds for the vaiables in the function.
+#' @param .upper A vector of upper bounds for the vaiables in the function.
+#' @param .maxiter The number of iterations to run for finding a solution.
+#' @param .option A string, either "maximize" or "minimize" the function.
+#' @param .seed An integer vector containing the random number generator state.
+#'
+#' @return A `tibble`.
+#' @export
+#'
+optimize_with_jaya <- function(
+  .model,
+  .vars,
+  .lower,
+  .upper,
+  .maxiter = 10,
+  .option  = "minimize",
+  .seed    = NULL
+) {
+
+  ## create custom predict function
+  pred <- function(x) {
+
+    newdata <- t(x) |>
+      as.data.frame() |>
+      purrr::set_names(.vars)
+
+    results <- stats::predict(.model, newdata) |> dplyr::pull(.pred)
+
+    return(results)
+
+  }
+
+  ## solve problem
+  S <- Jaya::jaya(fun = pred, lower = .lower, upper = .upper,
+                  maxiter = .maxiter, n_var = length(.vars), opt = .option,
+                  seed = .seed)
+
+  names(S$best) <- c(.vars, "f(x)")
+
+  return(S$best |> t() |> tibble::enframe())
+
+}
+
+
+#' optimize_with_cobyla
+#'
+#' @param .model A `parsnip` trained model or `workflow`.
+#' @param .vars A character vector with the names of the input variables.
+#' @param .lower A vector of lower bounds for the vaiables in the function.
+#' @param .upper A vector of upper bounds for the vaiables in the function.
+#' @param .x0 The starting point for searching the optimum.
+#' @param .maxiter The number of iterations to run for finding a solution.
+#' @param .option A string, either "maximize" or "minimize" the function.
+#'
+#' @return A `tibble`.
+#' @export
+#'
+optimize_with_cobyla <- function(
+    .model,
+    .vars,
+    .lower,
+    .upper,
+    .x0,
+    .maxiter = 10,
+    .option  = "minimize"
+) {
+
+  ## create custom predict function
+  pred <- function(x) {
+
+    newdata <- t(x) |>
+      as.data.frame() |>
+      purrr::set_names(.vars)
+
+    results <- stats::predict(.model, newdata) |> dplyr::pull(.pred)
+
+    mult <- switch (
+      .option,
+      "minimize" = 1,
+      "minimise" = 1,
+      "min"      = 1,
+      "Min"      = 1,
+      -1
+    )
+
+    return(mult * results)
+
+  }
+
+  ## solve problem
+  S <- nloptr::cobyla(x0 = .x0, fn = pred, lower = .lower, upper = .upper,
+                      control=list(maxeval = .maxiter))
+
+  sol <- c(S$par, ifelse(S$value < 0, -S$value, S$value))
+
+  names(sol) <- c(.vars, "f(x)")
+
+  return(sol |> tibble::enframe())
+
+}
+
+
+#' optimize_with_spaceballs_princess
+#'
+#' @param .model A `parsnip` trained model or `workflow`.
+#' @param .vars A character vector with the names of the input variables.
+#' @param .lower A vector of lower bounds for the vaiables in the function.
+#' @param .upper A vector of upper bounds for the vaiables in the function.
+#' @param .eps A convergence control parameter: if the maximum st.dev. of the
+#' parameters of the elite individuals divided by its average value is smaller
+#' than this number, the method considers that it converged.
+#' @param .maxiter The number of iterations to run for finding a solution.
+#' @param .option A string, either "maximize" or "minimize" the function.
+#' @param .use_all_cores A flag to indicate if the user wants to use all the
+#' cores fromm the compute instance to run the fitness functions.
+#'
+#' @return A `tibble`.
+#' @export
+#'
+optimize_with_spaceballs_princess <- function(
+    .model,
+    .vars,
+    .lower,
+    .upper,
+    .eps           = 0.3,
+    .maxiter       = 10,
+    .option        = "minimize",
+    .use_all_cores = FALSE
+) {
+
+  ## create custom predict function
+  pred <- function(x) {
+
+    newdata <- t(x) |>
+      as.data.frame() |>
+      purrr::set_names(.vars)
+
+    results <- stats::predict(.model, newdata) |> dplyr::pull(.pred)
+
+    return(results)
+
+  }
+
+  minimize <- switch (.option,
+    "minimize" = TRUE,
+    "minimise" = TRUE,
+    "min"      = TRUE,
+    "Min"      = TRUE,
+    FALSE
+  )
+
+  ## solve problem
+  po <- RCEIM::ceimOpt(OptimFunction = "pred", maxIter = .maxiter,
+                       epsilon = .eps, nParams = length(.vars), verbose = FALSE,
+                       boundaries = cbind(.lower, .upper), minimize = minimize,
+                       parallelVersion = .use_all_cores)
+
+  names(po$BestMember) <- c(.vars, "f(x)")
+  po_tbl <- po$BestMember |> tibble::enframe()
+
+  return(po_tbl)
+
 }
 
 

@@ -16,27 +16,91 @@ if (WHICH_DATASET == "FZ") {
     nexaverser::impute_missing_values() |>
     purrr::map_df(\(x) {
       if (class(x) != "Date") {
-        x <- timetk::ts_clean_vec(x)
+        timetk::ts_clean_vec(x)
       } else { x }
     })
 
 } else {
 
-  tag_tbl <- readRDS("data-raw/rto_flotacao.rds") |>
-    dplyr::select(-x7210_lab_prod_cf_zinco_zn)
+  tag_tbl <- readxl::read_xlsx(path = "data-raw/BANCO DADOS - RTO.xlsx",
+                               sheet = 1, skip = 5)
+  tag_tbl <- tag_tbl |> janitor::clean_names()
+  tag_tbl[[1]] <- NULL
+  tag_tbl <- tag_tbl |> dplyr::rename(date = data_final)
+  tag_tbl <- tag_tbl |> dplyr::relocate(tq_10, .after = last_col())
+  tag_tbl$teor_rfw_lab <- NULL
+  tag_tbl$teor_rfc_lab <- NULL
 
-  y <- "lab_flot_cf_wil_zn"
+  tag_imp <- tag_tbl |> tidyr::drop_na()
 
-  keep <- names(tag_tbl)
+  y <- "tq_10"
 
-  tag_imp <- tag_tbl[, keep] |>
-    purrr::map_df(\(x) {
-      if (class(x)[1] == "numeric") {
-        x <- timetk::ts_clean_vec(x)
-      } else { x }
-    })
+  # keep <- colMeans(is.na(tag_tbl)) <= 0.3
+  #
+  # tag_imp <- tag_tbl[, keep] |>
+  #   purrr::map_df(\(x) {
+  #     if (!grepl("POSIXct", class(x)[1])) {
+  #       timetk::ts_impute_vec(x) |>
+  #         timetk::ts_clean_vec()
+  #     } else { x }
+  #   })
 
 }
+
+tag_imp |> nexaverser::plot_tag_data()
+
+vars_to_remove_anomalies <- c(
+  "nivel_rg_i_c",
+  "nivel_rg_ii_c",
+  "nivel_rg_iii_c",
+  "nivel_cl_i_c",
+  "nivel_cl_ii_c",
+  "nivel_cl_iii_c",
+  "rougher_i_w",
+  "rougher_ii_w",
+  "rougher_iii_w",
+  "vazao_bulk",
+  "vazao_c",
+  "vazao_w",
+  "vazao_cfw",
+  "vazao_cfc",
+  "vazao_cfbulk",
+  "percent_solidos_cfw",
+  "percent_solidos_cfc",
+  "percent_solidos_cfbulk"
+)
+
+bad_dates <- list()
+
+for (i in seq_along(vars_to_remove_anomalies)) {
+
+  tag_df <- tag_imp |>
+    dplyr::select(all_of(c("date", vars_to_remove_anomalies[i])))
+
+  names(tag_df) <- c("date", "value")
+
+  anom_dates <- tag_df |>
+    timetk::tk_anomaly_diagnostics(.date_var = date, .value = value) |>
+    dplyr::filter(anomaly == "Yes") |>
+    dplyr::pull(date)
+
+  bad_dates[[i]] <- anom_dates
+
+}
+
+unixtime_to_date <-
+function(ut) {
+
+  g <- ut / 1
+  h <- as.POSIXct(g, tz = "UTC", origin = "1970-01-01")
+  return(h)
+
+}
+
+bad_dates <- bad_dates |> unlist() |> unixtime_to_date() |> unique()
+
+tag_imp <- tag_imp |>
+  dplyr::filter(!date %in% bad_dates)
 
 tag_imp |> nexaverser::plot_tag_data()
 
@@ -62,9 +126,9 @@ at$trend_data |> dplyr::select(date, value) |> utils::tail(60) |>
 sel_features_1 <- nexaverser::select_features_with_boruta(
   .tag_dat        = tag_imp,
   .target         = y,
-  .balance        = TRUE,
+  .balance        = FALSE,
   .with_tentative = FALSE,
-  .return_data    = TRUE,
+  .return_data    = FALSE,
   .task           = "regression"
 )
 
@@ -72,8 +136,8 @@ sel_features_1 <- nexaverser::select_features_with_boruta(
 sel_features_2 <- nexaverser::select_features_with_trex(
   .tag_dat        = tag_imp,
   .target         = y,
-  .balance        = TRUE,
-  .return_data    = TRUE,
+  .balance        = FALSE,
+  .return_data    = FALSE,
   .task           = "regression"
 )
 
@@ -81,33 +145,47 @@ sel_features_2 <- nexaverser::select_features_with_trex(
 sel_features_3 <- nexaverser::select_features_with_pps(
   .tag_dat     = tag_imp,
   .target      = y,
-  .balance     = TRUE,
-  .return_data = TRUE,
+  .balance     = FALSE,
+  .return_data = FALSE,
   .task        = "regression"
 )
 
 # * Feature Selection 4 ----
 sel_features_4 <- nexaverser::run_causation_analysis(
-  .tag_dat = tag_imp,
+  .tag_dat = tag_imp |>
+    dplyr::filter(lubridate::year(date) == 2022, lubridate::month(date) >= 4),
   .target  = y,
-  .max_lag = 15
+  .max_lag = 24
 )
 
 sel_features <- nexaverser::select_features_with_trex(
   .tag_dat        = tag_imp[, c(sel_features_4, y)],
   .target         = y,
-  .balance        = TRUE,
-  .return_data    = TRUE,
-  .task           = "regression"
+  .balance        = FALSE,
+  .return_data    = FALSE,
+  .task           = "regression",
+  .corr_max       = 0.5
 )
 
-# sel_features <- sel_features_4
+selected_features <- sel_features_2$selected_features
+
+df <- tag_imp |>
+  dplyr::select(dplyr::all_of(c(selected_features, y)))
+
+# f <- as.formula(stringr::str_glue("{y} ~ ."))
+#
+# rec <- recipes::recipe(formula = f, data = df)
+#
+# corr_filter <- rec |>
+#   recipes::step_corr(recipes::all_numeric_predictors(), threshold = .5)
+#
+# selected_features <- corr_filter |>
+#   recipes::prep() |>
+#   recipes::juice() |>
+#   names()
 
 
 # MODELING 1 --------------------------------------------------------------
-
-df <- sel_features$data |>
-  dplyr::select(dplyr::all_of(c(sel_features$selected_features, y)))
 
 tictoc::tic()
 cubist_model <- nexaverser::train_cubist_model(
@@ -138,11 +216,23 @@ tictoc::toc()
 
 cubist_model_2d$model$fit$fit$fit |> vip::vip()
 
+# 3nd round
+vars <- cubist_vip$data$Variable[1:4]
+
+tictoc::tic()
+cubist_model_4d <- nexaverser::train_cubist_model(
+  .data            = df[, c(vars, y)],
+  .target          = y,
+  .strat           = FALSE,
+  .tune            = FALSE,
+  .surrogate_model = FALSE
+)
+tictoc::toc()
+
+cubist_model_4d$model$fit$fit$fit |> vip::vip()
+
 
 # MODELING 2 --------------------------------------------------------------
-
-df <- sel_features$data |>
-  dplyr::select(dplyr::all_of(c(sel_features$selected_features, y)))
 
 # 1st round
 tictoc::tic()
@@ -158,27 +248,22 @@ tictoc::toc()
 xgb_vip <- xgb_model$model$fit$fit$fit |> vip::vip()
 
 # 2nd round
-xvar <- xgb_vip$data$Variable[1]
-
-yvar <- xgb_vip$data$Variable[2]
+vars <- xgb_vip$data$Variable[1:5]
 
 tictoc::tic()
-xgb_model_2d <- nexaverser::train_xgboost_model(
-  .data            = df[, c(xvar, yvar, y)],
+xgb_model_2 <- nexaverser::train_xgboost_model(
+  .data            = df[, c(vars, y)],
   .target          = y,
   .strat           = FALSE,
-  .tune            = FALSE,
+  .tune            = TRUE,
   .surrogate_model = FALSE
 )
 tictoc::toc()
 
-xgb_model_2d$model$fit$fit$fit |> vip::vip()
+xgb_model_2$model$fit$fit$fit |> vip::vip()
 
 
 # MODELING 3 --------------------------------------------------------------
-
-df <- sel_features$data |>
-  dplyr::select(dplyr::all_of(c(sel_features$selected_features, y)))
 
 tictoc::tic()
 mars_model <- nexaverser::train_mars_model(
@@ -195,15 +280,12 @@ mars_vip <- mars_model$model$fit$fit$fit |> vip::vip()
 
 # MODELING 4 --------------------------------------------------------------
 
-df <- sel_features$data |>
-  dplyr::select(dplyr::all_of(c(sel_features$selected_features, y)))
-
 tictoc::tic()
 rf_model <- nexaverser::train_ranger_model(
   .data            = df,
   .target          = y,
   .strat           = FALSE,
-  .tune            = FALSE,
+  .tune            = TRUE,
   .surrogate_model = FALSE
 )
 tictoc::toc()
@@ -211,30 +293,28 @@ tictoc::toc()
 rf_vip <- rf_model$model$fit$fit$fit |> vip::vip()
 
 # 2nd round
-xvar <- rf_vip$data$Variable[1]
-
-yvar <- rf_vip$data$Variable[2]
+vars <- rf_vip$data$Variable[1:3]
 
 tictoc::tic()
-rf_model_2d <- nexaverser::train_ranger_model(
-  .data            = df[, c(xvar, yvar, y)],
+rf_model_3d <- nexaverser::train_ranger_model(
+  .data            = df[, c(vars, y)],
   .target          = y,
   .strat           = FALSE,
-  .tune            = FALSE,
+  .tune            = TRUE,
   .surrogate_model = FALSE
 )
 tictoc::toc()
 
-rf_model_2d$model$fit$fit$fit |> vip::vip()
+rf_model_3d$model$fit$fit$fit |> vip::vip()
 
 
 # MODELING 5 --------------------------------------------------------------
 
-data <- df[, c(selected_vars, y)]
+data <- df
 
 # Splits
 set.seed(1)
-splits <- rsample::initial_split(data, prop = 0.8, strata = y)
+splits <- rsample::initial_split(data, prop = 0.8, strata = all_of(y))
 train  <- rsample::training(splits)
 test   <- rsample::testing(splits)
 
@@ -324,8 +404,8 @@ h2o::h2o.shutdown(prompt = FALSE)
 
 # MODEL ANALYSIS ----------------------------------------------------------
 
-model   <- cubist_model$model # global var to pred
-var_imp <- cubist_vip
+model   <- rf_model$model # global var to pred
+var_imp <- rf_vip
 
 
 # * CETERIS PARIBUS -------------------------------------------------------
@@ -336,7 +416,7 @@ yvar <- var_imp$data$Variable[2]
 
 cp_plt <- nexaverser::coeteris_paribus(
   .model   = model,
-  .newdata = df[, c(xvar, yvar, y)],
+  .newdata = df,
   .target  = y
 )
 
@@ -364,9 +444,6 @@ ppm <- nexaverser::plant_performance_map(
 )
 
 ppm
-
-
-
 
 
 # * OPTIMIZATION ----------------------------------------------------------
@@ -504,52 +581,51 @@ sol_jaya
 
 # ** Jaya, more complex problem ----
 
-model   <- cubist_model$model # global var to pred
-lower <- apply(df |> dplyr::select(-lab_flot_cf_wil_zn), 2, min)
-upper <- apply(df |> dplyr::select(-lab_flot_cf_wil_zn), 2, max)
+vars  <- sel_features$selected_features
 
-## create custom predict function
-pred <- function(x) {
+model   <- rf_model$model # global var to pred
+lower <- apply(df |> dplyr::select(all_of(vars)), 2, min)
+upper <- apply(df |> dplyr::select(all_of(vars)), 2, max)
 
-  newdata <- t(x) |>
-    as.data.frame() |>
-    purrr::set_names(
-      c("fit_34_006",
-        "x7210_fit_81_003_vm",
-        "lab_flot_uc_cf_wil_zn",
-        "x7210_pid_lic_081_005_pv",
-        "ait_34_002",
-        "ait_81_001",
-        "lit_34_003",
-        "lit_34_004",
-        "lit_44003",
-        "lit_81_003b",
-        "lab_pb_ag_pb_flot_sel_pb_ag_pb")
-    )
+sol <- nexaverser::optimize_with_jaya(
+  .model   = model,
+  .vars    = vars,
+  .lower   = lower,
+  .upper   = upper,
+  .maxiter = 5,
+  .option  = "minimize"
+)
 
-  results <- stats::predict(model, newdata) |> dplyr::pull(.pred)
-
-  return(results)
-
-}
-
-S <- jaya(fun = pred, lower = lower, upper = upper, maxiter = 21,
-          n_var = length(lower), opt = "maximize")
-
-names(S$best) <- names(df)
-S$best |> dplyr::as_tibble() |> View()
+sol
 
 # ** CEIM ----
 
-library(RCEIM)
+po <- nexaverser::optimize_with_spaceballs_princess(
+  .model         = model,
+  .vars          = vars,
+  .lower         = lower,
+  .upper         = upper,
+  .eps           = 0.3,
+  .maxiter       = 5,
+  .option        = "minimize",
+  .use_all_cores = FALSE
+)
 
-tictoc::tic()
-po <- ceimOpt(OptimFunction="pred", maxIter=21, epsilon=0.3,
-              nParams=length(lower), verbose=TRUE,
-              boundaries = cbind(lower, upper))
-tictoc::toc()
+po
 
-po$BestMember
+# ** COBYLA, once more ----
+
+S <- nexaverser::optimize_with_cobyla(
+  .model   = model,
+  .vars    = vars,
+  .lower   = lower,
+  .upper   = upper,
+  .x0      = sol$value[1:length(vars)],
+  .maxiter = 100,
+  .option  = "minimize"
+)
+
+S
 
 
 # CLUSTERING --------------------------------------------------------------
@@ -561,7 +637,8 @@ clusters <- nexaverser::cluster_ts(tag_imp, 3)
 
 # * Data ----
 
-data_prepared_tbl <- tag_imp[, 1:2] |>
+data_prepared_tbl <- tag_imp |>
+  dplyr::select(all_of(c("date", "teor_zn"))) |>
   purrr::set_names(c("date", "value")) |>
   dplyr::mutate(value = timetk::ts_clean_vec(value)) |>
   tibble::as_tibble()
@@ -590,7 +667,7 @@ data_prepared_tbl <- tag_imp[, 1:2] |>
 splits <- timetk::time_series_split(
   data       = data_prepared_tbl,
   date_var   = date,
-  assess     = "15 days",
+  assess     = "4 hours",
   cumulative = TRUE
 )
 
@@ -602,8 +679,8 @@ splits |>
 
 prophet_fit <- nexaverser::forecast_prophet(
   .tag_dat = data_prepared_tbl,
-  .assess  = "15 days",
-  .horiz   = 15
+  .assess  = "6 hours",
+  .horiz   = 6
 )
 
 attributes(prophet_fit)[["plot"]]
