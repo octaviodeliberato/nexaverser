@@ -36,7 +36,7 @@ discarded.}
 minus 1.}
 }
 \value{
-A list.
+A character vector.
 }
 \description{
 select_features_with_pps

@@ -9,7 +9,7 @@
 #' return object.
 #' @param .task Either "regression" or "classification".
 #'
-#' @return A list.
+#' @return A character vector.
 #' @export
 #'
 select_features_with_boruta <- function(
@@ -21,7 +21,40 @@ select_features_with_boruta <- function(
     .task           = "regression"
 ) {
 
-  # missing some safety checks
+  # Check if .tag_dat inherits from either a "data.frame" or a "tibble".
+  if (!inherits(.tag_dat, c("data.frame", "tbl", "tbl_df"))) {
+    stop("The data must be a data.frame or a tibble.")
+  }
+
+  # Check if .tag_dat has a date column.
+  if (!"date" %in% names(.tag_dat)) {
+    stop("The data must have a date column.")
+  }
+
+  # Check if .target is a string.
+  if (!is.character(.target)) {
+    stop("The target variable must be a string.")
+  }
+
+  # Check if .balance is a logical.
+  if (!is.logical(.balance)) {
+    stop("The balance argument must be a logical.")
+  }
+
+  # Check if .with_tentative is a logical.
+  if (!is.logical(.with_tentative)) {
+    stop("The with_tentative argument must be a logical.")
+  }
+
+  # Check if .return_data is a logical.
+  if (!is.logical(.return_data)) {
+    stop("The return_data argument must be a logical.")
+  }
+
+  # Check if .task is either "regression" or "classification".
+  if (!.task %in% c("regression", "classification")) {
+    stop("The task argument must be either 'regression' or 'classification'.")
+  }
 
   set.seed(1)
 
@@ -80,11 +113,12 @@ select_features_with_boruta <- function(
 
   }
 
-  features <- list(selected_features = selected_attrs)
+  features <- selected_attrs
 
   if (.return_data) {
 
-    features[["data"]] <- df
+    # Return df as an attribute of features.
+    attr(features, "data") <- df
 
   }
 
@@ -108,7 +142,7 @@ select_features_with_boruta <- function(
 #' @param .max_cores Maximum number of cores to be used for parallel processing
 #' (default: min of 20 random experiments and number of physical cores).
 #'
-#' @return A list.
+#' @return A character vector.
 #' @export
 #'
 select_features_with_trex <- function(
@@ -122,7 +156,50 @@ select_features_with_trex <- function(
     .max_cores   = min(20, max(1, parallel::detectCores(logical = FALSE) - 1))
 ) {
 
-  # missing some safety checks
+  # Check if .tag_dat inherits from either a "data.frame" or a "tibble".
+  if (!inherits(.tag_dat, c("data.frame", "tbl", "tbl_df"))) {
+    stop("The data must be a data.frame or a tibble.")
+  }
+
+  # Check if .tag_dat has a date column.
+  if (!"date" %in% names(.tag_dat)) {
+    stop("The data must have a date column.")
+  }
+
+  # Check if .target is a string.
+  if (!is.character(.target)) {
+    stop("The target variable must be a string.")
+  }
+
+  # Check if .balance is a logical.
+  if (!is.logical(.balance)) {
+    stop("The balance argument must be a logical.")
+  }
+
+  # Check if .return_data is a logical.
+  if (!is.logical(.return_data)) {
+    stop("The return_data argument must be a logical.")
+  }
+
+  # Check if .task is either "regression" or "classification".
+  if (!.task %in% c("regression", "classification")) {
+    stop("The task argument must be either 'regression' or 'classification'.")
+  }
+
+  # Check if .corr_max is a number.
+  if (!is.numeric(.corr_max)) {
+    stop("The corr_max argument must be a number.")
+  }
+
+  # Check if .parallel is a logical.
+  if (!is.logical(.parallel)) {
+    stop("The parallel argument must be a logical.")
+  }
+
+  # Check if .max_cores is an integer.
+  if (!is.integer(.max_cores)) {
+    stop("The max_cores argument must be an integer.")
+  }
 
   set.seed(1)
 
@@ -195,11 +272,12 @@ select_features_with_trex <- function(
 
   }
 
-  features <- list(selected_features = selected_attrs)
+  features <- selected_attrs
 
   if (.return_data) {
 
-    features[["data"]] <- df
+    # Return df as an attribute of features.
+    attr(features, "data") <- df
 
   }
 
@@ -222,7 +300,7 @@ select_features_with_trex <- function(
 #' @param .max_cores Maximum number of cores to use, defaults to maximum
 #' minus 1.
 #'
-#' @return A list.
+#' @return A character vector.
 #' @export
 #'
 select_features_with_pps <- function(
@@ -236,7 +314,45 @@ select_features_with_pps <- function(
     .max_cores   = -1
 ) {
 
-  # missing some safety checks
+  # Check if .tag_dat is a data.frame or a tibble.
+  if (!inherits(.tag_dat, c("data.frame", "tbl", "tbl_df"))) {
+    stop("The data must be a data.frame or a tibble.")
+  }
+
+  # Check if .target is a string.
+  if (!is.character(.target)) {
+    stop("The target variable must be a string.")
+  }
+
+  # Check if .balance is a logical.
+  if (!is.logical(.balance)) {
+    stop("The balance argument must be a logical.")
+  }
+
+  # Check if .return_data is a logical.
+  if (!is.logical(.return_data)) {
+    stop("The return_data argument must be a logical.")
+  }
+
+  # Check if .task is either "regression" or "classification".
+  if (!.task %in% c("regression", "classification")) {
+    stop("The task argument must be either 'regression' or 'classification'.")
+  }
+
+  # Check if .cutoff is a number.
+  if (!is.numeric(.cutoff)) {
+    stop("The cutoff argument must be a number.")
+  }
+
+  # Check if .parallel is a logical.
+  if (!is.logical(.parallel)) {
+    stop("The parallel argument must be a logical.")
+  }
+
+  # Check if .max_cores is an integer.
+  if (!is.integer(.max_cores)) {
+    stop("The max_cores argument must be an integer.")
+  }
 
   set.seed(1)
 
@@ -302,11 +418,12 @@ select_features_with_pps <- function(
 
   }
 
-  features <- list(selected_features = selected_attrs)
+  features <- selected_attrs
 
   if (.return_data) {
 
-    features[["data"]] <- df
+    # Return df as an attribute of features.
+    attr(features, "data") <- df
 
   }
 
@@ -322,10 +439,25 @@ select_features_with_pps <- function(
 #' @param max_lag An integer specifying the order of delays to include in the
 #' auxiliary regression. Defaults to 7.
 #'
-#' @return A list.
+#' @return A numeric vector.
 #' @export
 #'
 calc_p_value_granger_fit <- function(tag_x, tag_y, max_lag = 7) {
+
+  # Check if tag_x is a numeric vector.
+  if (!is.numeric(tag_x)) {
+    stop("The tag_x argument must be a numeric vector.")
+  }
+
+  # Check if tag_y is a numeric vector.
+  if (!is.numeric(tag_y)) {
+    stop("The tag_y argument must be a numeric vector.")
+  }
+
+  # Check if max_lag is an integer.
+  if (!is.integer(max_lag)) {
+    stop("The max_lag argument must be an integer.")
+  }
 
   fit_granger <- vector(mode = "list", length = max_lag)
 
@@ -366,6 +498,27 @@ run_causation_analysis <- function(
     .max_lag = 7,
     .assess  = NULL
 ) {
+
+  # Check if .tag_dat inherits from a data.frame or a tibble.
+  if (!inherits(.tag_dat, c("data.frame", "tbl", "tbl_df"))) {
+    stop("The tag_dat argument must inherit from a data.frame or a tibble.")
+  }
+
+  # Check if .target is a character vector.
+  if (!is.character(.target)) {
+    stop("The target argument must be a character vector.")
+  }
+
+  # Check if .max_lag is an integer.
+  if (!is.integer(.max_lag)) {
+    stop("The max_lag argument must be an integer.")
+  }
+
+  # Check if .assess is an integer.
+  if (!is.integer(.assess)) {
+    stop("The assess argument must be an integer.")
+  }
+
 
   x <- setdiff(names(.tag_dat), c("date", .target))
 

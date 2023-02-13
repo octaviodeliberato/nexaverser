@@ -1,53 +1,30 @@
 # DATA --------------------------------------------------------------------
 
-WHICH_DATASET <- "RTO"
+tag_tbl <- readxl::read_xlsx(path = "data-raw/BANCO DADOS - RTO.xlsx",
+                             sheet = 1, skip = 5)
+tag_tbl <- tag_tbl |> janitor::clean_names()
+tag_tbl[[1]] <- NULL
+tag_tbl <- tag_tbl |> dplyr::rename(date = data_final)
+tag_tbl <- tag_tbl |> dplyr::relocate(tq_10, .after = last_col())
+names(tag_tbl) |>
+  stringr::str_detect(string = _, pattern = "^teor_[a-z]{1}f", negate = TRUE) |>
+  which() -> .
 
-if (WHICH_DATASET == "FZ") {
+tag_tbl <- tag_tbl[, .]
 
-  tag_tbl <- nexaverser::fz_data
+tag_tbl |> nexaverser::plot_tag_data()
 
-  y <- "lb_fz_filtros033silw_zn"
-
-  # keep <- colMeans(is.na(tag_tbl)) <= 0.3
-  keep <- names(tag_tbl)
-
-  tag_imp <- tag_tbl[, keep] |>
-    utils::tail(540) |>
-    nexaverser::impute_missing_values() |>
-    purrr::map_df(\(x) {
-      if (class(x) != "Date") {
-        timetk::ts_clean_vec(x)
-      } else { x }
-    })
-
-} else {
-
-  tag_tbl <- readxl::read_xlsx(path = "data-raw/BANCO DADOS - RTO.xlsx",
-                               sheet = 1, skip = 5)
-  tag_tbl <- tag_tbl |> janitor::clean_names()
-  tag_tbl[[1]] <- NULL
-  tag_tbl <- tag_tbl |> dplyr::rename(date = data_final)
-  tag_tbl <- tag_tbl |> dplyr::relocate(tq_10, .after = last_col())
-  tag_tbl$teor_rfw_lab <- NULL
-  tag_tbl$teor_rfc_lab <- NULL
-
-  tag_imp <- tag_tbl |> tidyr::drop_na()
-
-  y <- "tq_10"
-
-  # keep <- colMeans(is.na(tag_tbl)) <= 0.3
-  #
-  # tag_imp <- tag_tbl[, keep] |>
-  #   purrr::map_df(\(x) {
-  #     if (!grepl("POSIXct", class(x)[1])) {
-  #       timetk::ts_impute_vec(x) |>
-  #         timetk::ts_clean_vec()
-  #     } else { x }
-  #   })
-
-}
+# from visual inspection
+tag_imp <- tag_tbl |>
+  timetk::filter_by_time(
+    .date_var   = date,
+    .start_date = "2021-07-01",
+    .end_date   = "2022-01-31"
+  )
 
 tag_imp |> nexaverser::plot_tag_data()
+
+y <- "tq_10"
 
 vars_to_remove_anomalies <- c(
   "nivel_rg_i_c",
@@ -67,7 +44,8 @@ vars_to_remove_anomalies <- c(
   "vazao_cfbulk",
   "percent_solidos_cfw",
   "percent_solidos_cfc",
-  "percent_solidos_cfbulk"
+  "percent_solidos_cfbulk",
+  "p_h_rg1_c"
 )
 
 bad_dates <- list()
@@ -80,6 +58,7 @@ for (i in seq_along(vars_to_remove_anomalies)) {
   names(tag_df) <- c("date", "value")
 
   anom_dates <- tag_df |>
+    dplyr::mutate(value =  timetk::ts_impute_vec(value)) |>
     timetk::tk_anomaly_diagnostics(.date_var = date, .value = value) |>
     dplyr::filter(anomaly == "Yes") |>
     dplyr::pull(date)
@@ -88,19 +67,14 @@ for (i in seq_along(vars_to_remove_anomalies)) {
 
 }
 
-unixtime_to_date <-
-function(ut) {
+bad_dates <- bad_dates |>
+  do.call(args = _, rlist::list.append) |>
+  unique()
 
-  g <- ut / 1
-  h <- as.POSIXct(g, tz = "UTC", origin = "1970-01-01")
-  return(h)
+tag_imp[tag_imp$date %in% bad_dates, vars_to_remove_anomalies] <- NA
 
-}
-
-bad_dates <- bad_dates |> unlist() |> unixtime_to_date() |> unique()
-
-tag_imp <- tag_imp |>
-  dplyr::filter(!date %in% bad_dates)
+# impute missings
+tag_imp <- tag_imp |> nexaverser::impute_missing_values()
 
 tag_imp |> nexaverser::plot_tag_data()
 
@@ -153,18 +127,9 @@ sel_features_3 <- nexaverser::select_features_with_pps(
 # * Feature Selection 4 ----
 sel_features_4 <- nexaverser::run_causation_analysis(
   .tag_dat = tag_imp |>
-    dplyr::filter(lubridate::year(date) == 2022, lubridate::month(date) >= 4),
+    dplyr::slice_tail(n = 365*6/2),
   .target  = y,
-  .max_lag = 24
-)
-
-sel_features <- nexaverser::select_features_with_trex(
-  .tag_dat        = tag_imp[, c(sel_features_4, y)],
-  .target         = y,
-  .balance        = FALSE,
-  .return_data    = FALSE,
-  .task           = "regression",
-  .corr_max       = 0.5
+  .max_lag = 6
 )
 
 selected_features <- sel_features_2$selected_features
@@ -172,17 +137,21 @@ selected_features <- sel_features_2$selected_features
 df <- tag_imp |>
   dplyr::select(dplyr::all_of(c(selected_features, y)))
 
-# f <- as.formula(stringr::str_glue("{y} ~ ."))
-#
-# rec <- recipes::recipe(formula = f, data = df)
-#
-# corr_filter <- rec |>
-#   recipes::step_corr(recipes::all_numeric_predictors(), threshold = .5)
-#
-# selected_features <- corr_filter |>
-#   recipes::prep() |>
-#   recipes::juice() |>
-#   names()
+f <- as.formula(stringr::str_glue("{y} ~ ."))
+
+rec <- recipes::recipe(formula = f, data = df)
+
+corr_filter <- rec |>
+  recipes::step_corr(recipes::all_numeric_predictors(), threshold = .7)
+
+selected_features <- corr_filter |>
+  recipes::prep() |>
+  recipes::juice() |>
+  names() |>
+  setdiff(y = y)
+
+df <- tag_imp |>
+  dplyr::select(dplyr::all_of(c(selected_features, y)))
 
 
 # MODELING 1 --------------------------------------------------------------
@@ -248,19 +217,34 @@ tictoc::toc()
 xgb_vip <- xgb_model$model$fit$fit$fit |> vip::vip()
 
 # 2nd round
-vars <- xgb_vip$data$Variable[1:5]
 
 tictoc::tic()
 xgb_model_2 <- nexaverser::train_xgboost_model(
-  .data            = df[, c(vars, y)],
+  .data            = df,
   .target          = y,
   .strat           = FALSE,
   .tune            = TRUE,
-  .surrogate_model = FALSE
+  .surrogate_model = FALSE,
+  .num_cores       = parallelly::availableCores() - 1
 )
 tictoc::toc()
 
 xgb_model_2$model$fit$fit$fit |> vip::vip()
+
+# 3rd round
+
+tictoc::tic()
+xgb_model_3 <- nexaverser::train_xgboost_model(
+  .data            = df,
+  .target          = y,
+  .strat           = TRUE,
+  .tune            = TRUE,
+  .surrogate_model = FALSE,
+  .num_cores       = parallelly::availableCores() - 1
+)
+tictoc::toc()
+
+xgb_model_3$model$fit$fit$fit |> vip::vip()
 
 
 # MODELING 3 --------------------------------------------------------------
@@ -285,7 +269,7 @@ rf_model <- nexaverser::train_ranger_model(
   .data            = df,
   .target          = y,
   .strat           = FALSE,
-  .tune            = TRUE,
+  .tune            = FALSE,
   .surrogate_model = FALSE
 )
 tictoc::toc()
@@ -349,7 +333,7 @@ lb <- aml@leaderboard
 # Get model ids for all models in the AutoML Leaderboard
 model_ids <- as.data.frame(aml@leaderboard$model_id)[, 1]
 # Pick a model
-best <- h2o::h2o.getModel(model_ids[1])
+best <- h2o::h2o.getModel(model_ids[3])
 
 # Variable importance
 h2o::h2o.varimp_plot(best)

@@ -29,7 +29,7 @@ return object.}
 \item{.task}{Either "regression" or "classification".}
 }
 \value{
-A list.
+A character vector.
 }
 \description{
 select_features_with_boruta

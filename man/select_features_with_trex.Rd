@@ -37,7 +37,7 @@ parallel. Defaults to FALSE.}
 (default: min of 20 random experiments and number of physical cores).}
 }
 \value{
-A list.
+A character vector.
 }
 \description{
 select_features_with_trex

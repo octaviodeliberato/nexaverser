@@ -15,7 +15,7 @@ calc_p_value_granger_fit(tag_x, tag_y, max_lag = 7)
 auxiliary regression. Defaults to 7.}
 }
 \value{
-A list.
+A numeric vector.
 }
 \description{
 calc_p_value_granger_fit
