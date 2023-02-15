@@ -9,7 +9,7 @@ optimize_with_jaya(
   .vars,
   .lower,
   .upper,
-  .maxiter = 10,
+  .maxiter = 10L,
   .option = "minimize",
   .seed = NULL
 )

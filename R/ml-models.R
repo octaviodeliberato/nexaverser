@@ -22,14 +22,117 @@ train_cubist_model <- function(
     .prop            = 0.8,
     .strat           = FALSE,
     .tune            = TRUE,
-    .grid_size       = 10,
-    .num_cores       = 1,
+    .grid_size       = 10L,
+    .num_cores       = 1L,
     .best_metric     = "rmse",
     .surrogate_model = FALSE
 ) {
 
-  # missing safety checks
+  # Check if .data inherits from either "data.frame", "tbl" or 'tbl_df"
+  if (!inherits(.data, c("data.frame", "tbl", "tbl_df"))) {
+    stop(
+      "Argument \".data\" must be a data.frame, tbl or tbl_df.",
+      call. = FALSE
+    )
+  }
 
+  # Check if .data is a data frame with a `date` col.
+  if (!"date" %in% colnames(.data)) {
+    stop(
+      "Argument \".data\" must be a data frame with a `date` column.", # nolint: line_length_linter.
+      call. = FALSE
+    )
+  }
+
+  # Check if .target is a string
+  if (!is.character(.target)) {
+    stop(
+      "Argument \".target\" must be a string.",
+      call. = FALSE
+    )
+  }
+
+  # Check if .target is in .data
+  if (!.target %in% colnames(.data)) {
+    stop(
+      "Argument \".target\" must be a column in \".data\".",
+      call. = FALSE
+    )
+  }
+
+  # Check if .prop is numeric
+  if (!is.numeric(.prop)) {
+    stop(
+      "Argument \".prop\" must be numeric.",
+      call. = FALSE
+    )
+  }
+
+  # Check if .prop is between 0 and 1
+  if (.prop < 0 || .prop > 1) {
+    stop(
+      "Argument \".prop\" must be between 0 and 1.",
+      call. = FALSE
+    )
+  }
+
+  # Check if .strat is logical
+  if (!is.logical(.strat)) {
+    stop(
+      "Argument \".strat\" must be logical.",
+      call. = FALSE
+    )
+  }
+
+  # Check if .tune is logical
+  if (!is.logical(.tune)) {
+    stop(
+      "Argument \".tune\" must be logical.",
+      call. = FALSE
+    )
+  }
+
+  # Check if .grid_size is integer
+  if (!is.integer(.grid_size)) {
+    stop(
+      "Argument \".grid_size\" must be integer.",
+      call. = FALSE
+    )
+  }
+
+  # Check if .num_cores is integer
+  if (!is.integer(.num_cores)) {
+    stop(
+      "Argument \".num_cores\" must be integer.",
+      call. = FALSE
+    )
+  }
+
+  # Check if .best_metric is a string
+  if (!is.character(.best_metric)) {
+    stop(
+      "Argument \".best_metric\" must be a string.",
+      call. = FALSE
+    )
+  }
+
+  # Check if .best_metric is in c("rmse", "mae", "r2", "acc")
+  if (!.best_metric %in% c("rmse", "mae", "r2", "acc")) {
+    stop(
+      "Argument \".best_metric\" must be one of \"rmse\", \"mae\", \"r2\", \"acc\".", # nolint: line_length_linter.
+      call. = FALSE
+    )
+  }
+
+  # Check if .surrogate_model is logical
+  if (!is.logical(.surrogate_model)) {
+    stop(
+      "Argument \".surrogate_model\" must be logical.",
+      call. = FALSE
+    )
+  }
+
+  # Check if package "rules" is installed
   if (!requireNamespace("rules", quietly = TRUE)) {
     stop(
       "Package \"rules\" must be installed to use this function.",
@@ -149,13 +252,107 @@ train_xgboost_model <- function(
     .prop            = 0.8,
     .strat           = FALSE,
     .tune            = TRUE,
-    .grid_size       = 10,
-    .num_cores       = 1,
+    .grid_size       = 10L,
+    .num_cores       = 1L,
     .model_type      = "regression",
     .surrogate_model = FALSE
 ) {
 
-  # missing safety checks
+  # Check if .data inherits from either "data.frame", "tbl" or 'tbl_df"
+  if (!inherits(.data, c("data.frame", "tbl", "tbl_df"))) {
+    stop(
+      "Argument \".data\" must be a data.frame, tbl or tbl_df.",
+      call. = FALSE
+    )
+  }
+
+  # Check if .data is a data frame with a `date` col.
+  if (!"date" %in% colnames(.data)) {
+    stop(
+      "Argument \".data\" must be a data frame with a `date` column.", # nolint: line_length_linter.
+      call. = FALSE
+    )
+  }
+
+  # Check if .target is a string
+  if (!is.character(.target)) {
+    stop(
+      "Argument \".target\" must be a string.",
+      call. = FALSE
+    )
+  }
+
+  # Check if .target is in .data
+  if (!.target %in% colnames(.data)) {
+    stop(
+      "Argument \".target\" must be a column in \".data\".",
+      call. = FALSE
+    )
+  }
+
+  # Check if .prop is numeric
+  if (!is.numeric(.prop)) {
+    stop(
+      "Argument \".prop\" must be numeric.",
+      call. = FALSE
+    )
+  }
+
+  # Check if .prop is between 0 and 1
+  if (.prop < 0 || .prop > 1) {
+    stop(
+      "Argument \".prop\" must be between 0 and 1.",
+      call. = FALSE
+    )
+  }
+
+  # Check if .strat is logical
+  if (!is.logical(.strat)) {
+    stop(
+      "Argument \".strat\" must be logical.",
+      call. = FALSE
+    )
+  }
+
+  # Check if .tune is logical
+  if (!is.logical(.tune)) {
+    stop(
+      "Argument \".tune\" must be logical.",
+      call. = FALSE
+    )
+  }
+
+  # Check if .grid_size is integer
+  if (!is.integer(.grid_size)) {
+    stop(
+      "Argument \".grid_size\" must be integer.",
+      call. = FALSE
+    )
+  }
+
+  # Check if .num_cores is integer
+  if (!is.integer(.num_cores)) {
+    stop(
+      "Argument \".num_cores\" must be integer.",
+      call. = FALSE
+    )
+  }
+
+  # Check if .model_type is either "regression" or "classification"
+  if (!.model_type %in% c("regression", "classification")) {
+    stop(
+      "Argument \".model_type\" must be either \"regression\" or \"classification\".", # nolint: line_length_linter.
+      call. = FALSE
+    )
+  }
+
+  # Check if .surrogate_model is logical
+  if (!is.logical(.surrogate_model)) {
+    stop(
+      "Argument \".surrogate_model\" must be logical.",
+      call. = FALSE
+    )
+  }
 
   f <- stats::as.formula(stringr::str_glue("{.target} ~ ."))
   .data$date <- NULL
@@ -184,9 +381,10 @@ train_xgboost_model <- function(
 
   rec_obj <- healthyR.ai::hai_xgboost_data_prepper(train, f)
 
-  best_metric <- switch (.model_type,
-                         "regression"     = "rmse",
-                         "classification" = "accuracy"
+  best_metric <- switch(
+    .model_type,
+    "regression"     = "rmse",
+    "classification" = "accuracy"
   )
 
   auto_xgboost <- healthyR.ai::hai_auto_xgboost(
@@ -273,13 +471,107 @@ train_mars_model <- function(
     .prop            = 0.8,
     .strat           = FALSE,
     .tune            = TRUE,
-    .grid_size       = 10,
-    .num_cores       = 1,
+    .grid_size       = 10L,
+    .num_cores       = 1L,
     .model_type      = "regression",
     .surrogate_model = FALSE
 ) {
 
-  # missing safety checks
+  # Check if .data inherits from either "data.frame", "tbl" or 'tbl_df"
+  if (!inherits(.data, c("data.frame", "tbl", "tbl_df"))) {
+    stop(
+      "Argument \".data\" must be a data.frame, tbl or tbl_df.",
+      call. = FALSE
+    )
+  }
+
+  # Check if .data is a data frame with a `date` col.
+  if (!"date" %in% colnames(.data)) {
+    stop(
+      "Argument \".data\" must be a data frame with a `date` column.", # nolint: line_length_linter.
+      call. = FALSE
+    )
+  }
+
+  # Check if .target is a string
+  if (!is.character(.target)) {
+    stop(
+      "Argument \".target\" must be a string.",
+      call. = FALSE
+    )
+  }
+
+  # Check if .target is in .data
+  if (!.target %in% colnames(.data)) {
+    stop(
+      "Argument \".target\" must be a column in \".data\".",
+      call. = FALSE
+    )
+  }
+
+  # Check if .prop is numeric
+  if (!is.numeric(.prop)) {
+    stop(
+      "Argument \".prop\" must be numeric.",
+      call. = FALSE
+    )
+  }
+
+  # Check if .prop is between 0 and 1
+  if (.prop < 0 || .prop > 1) {
+    stop(
+      "Argument \".prop\" must be between 0 and 1.",
+      call. = FALSE
+    )
+  }
+
+  # Check if .strat is logical
+  if (!is.logical(.strat)) {
+    stop(
+      "Argument \".strat\" must be logical.",
+      call. = FALSE
+    )
+  }
+
+  # Check if .tune is logical
+  if (!is.logical(.tune)) {
+    stop(
+      "Argument \".tune\" must be logical.",
+      call. = FALSE
+    )
+  }
+
+  # Check if .grid_size is integer
+  if (!is.integer(.grid_size)) {
+    stop(
+      "Argument \".grid_size\" must be integer.",
+      call. = FALSE
+    )
+  }
+
+  # Check if .num_cores is integer
+  if (!is.integer(.num_cores)) {
+    stop(
+      "Argument \".num_cores\" must be integer.",
+      call. = FALSE
+    )
+  }
+
+  # Check if .model_type is either "regression" or "classification"
+  if (!.model_type %in% c("regression", "classification")) {
+    stop(
+      "Argument \".model_type\" must be either \"regression\" or \"classification\".", # nolint: line_length_linter.
+      call. = FALSE
+    )
+  }
+
+  # Check if .surrogate_model is logical
+  if (!is.logical(.surrogate_model)) {
+    stop(
+      "Argument \".surrogate_model\" must be logical.",
+      call. = FALSE
+    )
+  }
 
   f <- stats::as.formula(stringr::str_glue("{.target} ~ ."))
   .data$date <- NULL
@@ -308,9 +600,10 @@ train_mars_model <- function(
 
   rec_obj <- healthyR.ai::hai_earth_data_prepper(train, f)
 
-  best_metric <- switch (.model_type,
-                         "regression"     = "rmse",
-                         "classification" = "accuracy"
+  best_metric <- switch(
+    .model_type,
+    "regression"     = "rmse",
+    "classification" = "accuracy"
   )
 
   auto_earth <- healthyR.ai::hai_auto_earth(
@@ -397,13 +690,107 @@ train_ranger_model <- function(
     .prop            = 0.8,
     .strat           = FALSE,
     .tune            = TRUE,
-    .grid_size       = 10,
-    .num_cores       = 1,
+    .grid_size       = 10L,
+    .num_cores       = 1L,
     .model_type      = "regression",
     .surrogate_model = FALSE
 ) {
 
-  # missing safety checks
+  # Check if .data inherits from either "data.frame", "tbl" or 'tbl_df"
+  if (!inherits(.data, c("data.frame", "tbl", "tbl_df"))) {
+    stop(
+      "Argument \".data\" must be a data.frame, tbl or tbl_df.",
+      call. = FALSE
+    )
+  }
+
+  # Check if .data is a data frame with a `date` col.
+  if (!"date" %in% colnames(.data)) {
+    stop(
+      "Argument \".data\" must be a data frame with a `date` column.", # nolint: line_length_linter.
+      call. = FALSE
+    )
+  }
+
+  # Check if .target is a string
+  if (!is.character(.target)) {
+    stop(
+      "Argument \".target\" must be a string.",
+      call. = FALSE
+    )
+  }
+
+  # Check if .target is in .data
+  if (!.target %in% colnames(.data)) {
+    stop(
+      "Argument \".target\" must be a column in \".data\".",
+      call. = FALSE
+    )
+  }
+
+  # Check if .prop is numeric
+  if (!is.numeric(.prop)) {
+    stop(
+      "Argument \".prop\" must be numeric.",
+      call. = FALSE
+    )
+  }
+
+  # Check if .prop is between 0 and 1
+  if (.prop < 0 || .prop > 1) {
+    stop(
+      "Argument \".prop\" must be between 0 and 1.",
+      call. = FALSE
+    )
+  }
+
+  # Check if .strat is logical
+  if (!is.logical(.strat)) {
+    stop(
+      "Argument \".strat\" must be logical.",
+      call. = FALSE
+    )
+  }
+
+  # Check if .tune is logical
+  if (!is.logical(.tune)) {
+    stop(
+      "Argument \".tune\" must be logical.",
+      call. = FALSE
+    )
+  }
+
+  # Check if .grid_size is integer
+  if (!is.integer(.grid_size)) {
+    stop(
+      "Argument \".grid_size\" must be integer.",
+      call. = FALSE
+    )
+  }
+
+  # Check if .num_cores is integer
+  if (!is.integer(.num_cores)) {
+    stop(
+      "Argument \".num_cores\" must be integer.",
+      call. = FALSE
+    )
+  }
+
+  # Check if .model_type is either "regression" or "classification"
+  if (!.model_type %in% c("regression", "classification")) {
+    stop(
+      "Argument \".model_type\" must be either \"regression\" or \"classification\".", # nolint: line_length_linter.
+      call. = FALSE
+    )
+  }
+
+  # Check if .surrogate_model is logical
+  if (!is.logical(.surrogate_model)) {
+    stop(
+      "Argument \".surrogate_model\" must be logical.",
+      call. = FALSE
+    )
+  }
 
   f <- stats::as.formula(stringr::str_glue("{.target} ~ ."))
   .data$date <- NULL
@@ -432,9 +819,10 @@ train_ranger_model <- function(
 
   rec_obj <- healthyR.ai::hai_ranger_data_prepper(train, f)
 
-  best_metric <- switch (.model_type,
-                         "regression"     = "rmse",
-                         "classification" = "accuracy"
+  best_metric <- switch(
+    .model_type,
+    "regression"     = "rmse",
+    "classification" = "accuracy"
   )
 
   auto_ranger <- hai_auto_ranger(
@@ -521,13 +909,107 @@ train_knn_model <- function(
     .prop            = 0.8,
     .strat           = FALSE,
     .tune            = TRUE,
-    .grid_size       = 10,
-    .num_cores       = 1,
+    .grid_size       = 10L,
+    .num_cores       = 1L,
     .model_type      = "regression",
     .surrogate_model = FALSE
 ) {
 
-  # missing safety checks
+  # Check if .data inherits from either "data.frame", "tbl" or 'tbl_df"
+  if (!inherits(.data, c("data.frame", "tbl", "tbl_df"))) {
+    stop(
+      "Argument \".data\" must be a data.frame, tbl or tbl_df.",
+      call. = FALSE
+    )
+  }
+
+  # Check if .data is a data frame with a `date` col.
+  if (!"date" %in% colnames(.data)) {
+    stop(
+      "Argument \".data\" must be a data frame with a `date` column.", # nolint: line_length_linter.
+      call. = FALSE
+    )
+  }
+
+  # Check if .target is a string
+  if (!is.character(.target)) {
+    stop(
+      "Argument \".target\" must be a string.",
+      call. = FALSE
+    )
+  }
+
+  # Check if .target is in .data
+  if (!.target %in% colnames(.data)) {
+    stop(
+      "Argument \".target\" must be a column in \".data\".",
+      call. = FALSE
+    )
+  }
+
+  # Check if .prop is numeric
+  if (!is.numeric(.prop)) {
+    stop(
+      "Argument \".prop\" must be numeric.",
+      call. = FALSE
+    )
+  }
+
+  # Check if .prop is between 0 and 1
+  if (.prop < 0 || .prop > 1) {
+    stop(
+      "Argument \".prop\" must be between 0 and 1.",
+      call. = FALSE
+    )
+  }
+
+  # Check if .strat is logical
+  if (!is.logical(.strat)) {
+    stop(
+      "Argument \".strat\" must be logical.",
+      call. = FALSE
+    )
+  }
+
+  # Check if .tune is logical
+  if (!is.logical(.tune)) {
+    stop(
+      "Argument \".tune\" must be logical.",
+      call. = FALSE
+    )
+  }
+
+  # Check if .grid_size is integer
+  if (!is.integer(.grid_size)) {
+    stop(
+      "Argument \".grid_size\" must be integer.",
+      call. = FALSE
+    )
+  }
+
+  # Check if .num_cores is integer
+  if (!is.integer(.num_cores)) {
+    stop(
+      "Argument \".num_cores\" must be integer.",
+      call. = FALSE
+    )
+  }
+
+  # Check if .model_type is either "regression" or "classification"
+  if (!.model_type %in% c("regression", "classification")) {
+    stop(
+      "Argument \".model_type\" must be either \"regression\" or \"classification\".", # nolint: line_length_linter.
+      call. = FALSE
+    )
+  }
+
+  # Check if .surrogate_model is logical
+  if (!is.logical(.surrogate_model)) {
+    stop(
+      "Argument \".surrogate_model\" must be logical.",
+      call. = FALSE
+    )
+  }
 
   f <- stats::as.formula(stringr::str_glue("{.target} ~ ."))
   .data$date <- NULL
@@ -556,9 +1038,10 @@ train_knn_model <- function(
 
   rec_obj <- healthyR.ai::hai_knn_data_prepper(train, f)
 
-  best_metric <- switch (.model_type,
-                         "regression"     = "rmse",
-                         "classification" = "accuracy"
+  best_metric <- switch(
+    .model_type,
+    "regression"     = "rmse",
+    "classification" = "accuracy"
   )
 
   auto_knn <- healthyR.ai::hai_auto_knn(
@@ -645,13 +1128,107 @@ train_glmnet_model <- function(
     .prop            = 0.8,
     .strat           = FALSE,
     .tune            = TRUE,
-    .grid_size       = 10,
-    .num_cores       = 1,
+    .grid_size       = 10L,
+    .num_cores       = 1L,
     .model_type      = "regression",
     .surrogate_model = FALSE
 ) {
 
-  # missing safety checks
+  # Check if .data inherits from either "data.frame", "tbl" or 'tbl_df"
+  if (!inherits(.data, c("data.frame", "tbl", "tbl_df"))) {
+    stop(
+      "Argument \".data\" must be a data.frame, tbl or tbl_df.",
+      call. = FALSE
+    )
+  }
+
+  # Check if .data is a data frame with a `date` col.
+  if (!"date" %in% colnames(.data)) {
+    stop(
+      "Argument \".data\" must be a data frame with a `date` column.", # nolint: line_length_linter.
+      call. = FALSE
+    )
+  }
+
+  # Check if .target is a string
+  if (!is.character(.target)) {
+    stop(
+      "Argument \".target\" must be a string.",
+      call. = FALSE
+    )
+  }
+
+  # Check if .target is in .data
+  if (!.target %in% colnames(.data)) {
+    stop(
+      "Argument \".target\" must be a column in \".data\".",
+      call. = FALSE
+    )
+  }
+
+  # Check if .prop is numeric
+  if (!is.numeric(.prop)) {
+    stop(
+      "Argument \".prop\" must be numeric.",
+      call. = FALSE
+    )
+  }
+
+  # Check if .prop is between 0 and 1
+  if (.prop < 0 || .prop > 1) {
+    stop(
+      "Argument \".prop\" must be between 0 and 1.",
+      call. = FALSE
+    )
+  }
+
+  # Check if .strat is logical
+  if (!is.logical(.strat)) {
+    stop(
+      "Argument \".strat\" must be logical.",
+      call. = FALSE
+    )
+  }
+
+  # Check if .tune is logical
+  if (!is.logical(.tune)) {
+    stop(
+      "Argument \".tune\" must be logical.",
+      call. = FALSE
+    )
+  }
+
+  # Check if .grid_size is integer
+  if (!is.integer(.grid_size)) {
+    stop(
+      "Argument \".grid_size\" must be integer.",
+      call. = FALSE
+    )
+  }
+
+  # Check if .num_cores is integer
+  if (!is.integer(.num_cores)) {
+    stop(
+      "Argument \".num_cores\" must be integer.",
+      call. = FALSE
+    )
+  }
+
+  # Check if .model_type is either "regression" or "classification"
+  if (!.model_type %in% c("regression", "classification")) {
+    stop(
+      "Argument \".model_type\" must be either \"regression\" or \"classification\".", # nolint: line_length_linter.
+      call. = FALSE
+    )
+  }
+
+  # Check if .surrogate_model is logical
+  if (!is.logical(.surrogate_model)) {
+    stop(
+      "Argument \".surrogate_model\" must be logical.",
+      call. = FALSE
+    )
+  }
 
   f <- stats::as.formula(stringr::str_glue("{.target} ~ ."))
   .data$date <- NULL
@@ -680,9 +1257,10 @@ train_glmnet_model <- function(
 
   rec_obj <- healthyR.ai::hai_glmnet_data_prepper(train, f)
 
-  best_metric <- switch (.model_type,
-                         "regression"     = "rmse",
-                         "classification" = "accuracy"
+  best_metric <- switch(
+    .model_type,
+    "regression"     = "rmse",
+    "classification" = "accuracy"
   )
 
   auto_glmnet <- healthyR.ai::hai_auto_glmnet(
@@ -769,13 +1347,107 @@ train_c50_model <- function(
     .prop            = 0.8,
     .strat           = FALSE,
     .tune            = TRUE,
-    .grid_size       = 10,
-    .num_cores       = 1,
+    .grid_size       = 10L,
+    .num_cores       = 1L,
     .model_type      = "classification",
     .surrogate_model = FALSE
 ) {
 
-  # missing safety checks
+  # Check if .data inherits from either "data.frame", "tbl" or 'tbl_df"
+  if (!inherits(.data, c("data.frame", "tbl", "tbl_df"))) {
+    stop(
+      "Argument \".data\" must be a data.frame, tbl or tbl_df.",
+      call. = FALSE
+    )
+  }
+
+  # Check if .data is a data frame with a `date` col.
+  if (!"date" %in% colnames(.data)) {
+    stop(
+      "Argument \".data\" must be a data frame with a `date` column.", # nolint: line_length_linter.
+      call. = FALSE
+    )
+  }
+
+  # Check if .target is a string
+  if (!is.character(.target)) {
+    stop(
+      "Argument \".target\" must be a string.",
+      call. = FALSE
+    )
+  }
+
+  # Check if .target is in .data
+  if (!.target %in% colnames(.data)) {
+    stop(
+      "Argument \".target\" must be a column in \".data\".",
+      call. = FALSE
+    )
+  }
+
+  # Check if .prop is numeric
+  if (!is.numeric(.prop)) {
+    stop(
+      "Argument \".prop\" must be numeric.",
+      call. = FALSE
+    )
+  }
+
+  # Check if .prop is between 0 and 1
+  if (.prop < 0 || .prop > 1) {
+    stop(
+      "Argument \".prop\" must be between 0 and 1.",
+      call. = FALSE
+    )
+  }
+
+  # Check if .strat is logical
+  if (!is.logical(.strat)) {
+    stop(
+      "Argument \".strat\" must be logical.",
+      call. = FALSE
+    )
+  }
+
+  # Check if .tune is logical
+  if (!is.logical(.tune)) {
+    stop(
+      "Argument \".tune\" must be logical.",
+      call. = FALSE
+    )
+  }
+
+  # Check if .grid_size is integer
+  if (!is.integer(.grid_size)) {
+    stop(
+      "Argument \".grid_size\" must be integer.",
+      call. = FALSE
+    )
+  }
+
+  # Check if .num_cores is integer
+  if (!is.integer(.num_cores)) {
+    stop(
+      "Argument \".num_cores\" must be integer.",
+      call. = FALSE
+    )
+  }
+
+  # Check if .model_type is either "regression" or "classification"
+  if (!.model_type %in% c("regression", "classification")) {
+    stop(
+      "Argument \".model_type\" must be either \"regression\" or \"classification\".", # nolint: line_length_linter.
+      call. = FALSE
+    )
+  }
+
+  # Check if .surrogate_model is logical
+  if (!is.logical(.surrogate_model)) {
+    stop(
+      "Argument \".surrogate_model\" must be logical.",
+      call. = FALSE
+    )
+  }
 
   f <- stats::as.formula(stringr::str_glue("{.target} ~ ."))
   .data$date <- NULL
@@ -804,9 +1476,10 @@ train_c50_model <- function(
 
   rec_obj <- healthyR.ai::hai_c50_data_prepper(train, f)
 
-  best_metric <- switch (.model_type,
-                         "regression"     = "rmse",
-                         "classification" = "accuracy"
+  best_metric <- switch(
+    .model_type,
+    "regression"     = "rmse",
+    "classification" = "accuracy"
   )
 
   auto_c50 <- healthyR.ai::hai_auto_c50(
@@ -893,13 +1566,107 @@ train_svm_rbf_model <- function(
     .prop            = 0.8,
     .strat           = FALSE,
     .tune            = TRUE,
-    .grid_size       = 10,
-    .num_cores       = 1,
+    .grid_size       = 10L,
+    .num_cores       = 1L,
     .model_type      = "regression",
     .surrogate_model = FALSE
 ) {
 
-  # missing safety checks
+  # Check if .data inherits from either "data.frame", "tbl" or 'tbl_df"
+  if (!inherits(.data, c("data.frame", "tbl", "tbl_df"))) {
+    stop(
+      "Argument \".data\" must be a data.frame, tbl or tbl_df.",
+      call. = FALSE
+    )
+  }
+
+  # Check if .data is a data frame with a `date` col.
+  if (!"date" %in% colnames(.data)) {
+    stop(
+      "Argument \".data\" must be a data frame with a `date` column.", # nolint: line_length_linter.
+      call. = FALSE
+    )
+  }
+
+  # Check if .target is a string
+  if (!is.character(.target)) {
+    stop(
+      "Argument \".target\" must be a string.",
+      call. = FALSE
+    )
+  }
+
+  # Check if .target is in .data
+  if (!.target %in% colnames(.data)) {
+    stop(
+      "Argument \".target\" must be a column in \".data\".",
+      call. = FALSE
+    )
+  }
+
+  # Check if .prop is numeric
+  if (!is.numeric(.prop)) {
+    stop(
+      "Argument \".prop\" must be numeric.",
+      call. = FALSE
+    )
+  }
+
+  # Check if .prop is between 0 and 1
+  if (.prop < 0 || .prop > 1) {
+    stop(
+      "Argument \".prop\" must be between 0 and 1.",
+      call. = FALSE
+    )
+  }
+
+  # Check if .strat is logical
+  if (!is.logical(.strat)) {
+    stop(
+      "Argument \".strat\" must be logical.",
+      call. = FALSE
+    )
+  }
+
+  # Check if .tune is logical
+  if (!is.logical(.tune)) {
+    stop(
+      "Argument \".tune\" must be logical.",
+      call. = FALSE
+    )
+  }
+
+  # Check if .grid_size is integer
+  if (!is.integer(.grid_size)) {
+    stop(
+      "Argument \".grid_size\" must be integer.",
+      call. = FALSE
+    )
+  }
+
+  # Check if .num_cores is integer
+  if (!is.integer(.num_cores)) {
+    stop(
+      "Argument \".num_cores\" must be integer.",
+      call. = FALSE
+    )
+  }
+
+  # Check if .model_type is either "regression" or "classification"
+  if (!.model_type %in% c("regression", "classification")) {
+    stop(
+      "Argument \".model_type\" must be either \"regression\" or \"classification\".", # nolint: line_length_linter.
+      call. = FALSE
+    )
+  }
+
+  # Check if .surrogate_model is logical
+  if (!is.logical(.surrogate_model)) {
+    stop(
+      "Argument \".surrogate_model\" must be logical.",
+      call. = FALSE
+    )
+  }
 
   f <- stats::as.formula(stringr::str_glue("{.target} ~ ."))
   .data$date <- NULL
@@ -928,9 +1695,10 @@ train_svm_rbf_model <- function(
 
   rec_obj <- healthyR.ai::hai_svm_rbf_data_prepper(train, f)
 
-  best_metric <- switch (.model_type,
-                         "regression"     = "rmse",
-                         "classification" = "accuracy"
+  best_metric <- switch(
+    .model_type,
+    "regression"     = "rmse",
+    "classification" = "accuracy"
   )
 
   auto_svm <- healthyR.ai::hai_auto_svm_rbf(
@@ -1017,13 +1785,107 @@ train_svm_poly_model <- function(
     .prop            = 0.8,
     .strat           = FALSE,
     .tune            = TRUE,
-    .grid_size       = 10,
-    .num_cores       = 1,
+    .grid_size       = 10L,
+    .num_cores       = 1L,
     .model_type      = "regression",
     .surrogate_model = FALSE
 ) {
 
-  # missing safety checks
+  # Check if .data inherits from either "data.frame", "tbl" or 'tbl_df"
+  if (!inherits(.data, c("data.frame", "tbl", "tbl_df"))) {
+    stop(
+      "Argument \".data\" must be a data.frame, tbl or tbl_df.",
+      call. = FALSE
+    )
+  }
+
+  # Check if .data is a data frame with a `date` col.
+  if (!"date" %in% colnames(.data)) {
+    stop(
+      "Argument \".data\" must be a data frame with a `date` column.", # nolint: line_length_linter.
+      call. = FALSE
+    )
+  }
+
+  # Check if .target is a string
+  if (!is.character(.target)) {
+    stop(
+      "Argument \".target\" must be a string.",
+      call. = FALSE
+    )
+  }
+
+  # Check if .target is in .data
+  if (!.target %in% colnames(.data)) {
+    stop(
+      "Argument \".target\" must be a column in \".data\".",
+      call. = FALSE
+    )
+  }
+
+  # Check if .prop is numeric
+  if (!is.numeric(.prop)) {
+    stop(
+      "Argument \".prop\" must be numeric.",
+      call. = FALSE
+    )
+  }
+
+  # Check if .prop is between 0 and 1
+  if (.prop < 0 || .prop > 1) {
+    stop(
+      "Argument \".prop\" must be between 0 and 1.",
+      call. = FALSE
+    )
+  }
+
+  # Check if .strat is logical
+  if (!is.logical(.strat)) {
+    stop(
+      "Argument \".strat\" must be logical.",
+      call. = FALSE
+    )
+  }
+
+  # Check if .tune is logical
+  if (!is.logical(.tune)) {
+    stop(
+      "Argument \".tune\" must be logical.",
+      call. = FALSE
+    )
+  }
+
+  # Check if .grid_size is integer
+  if (!is.integer(.grid_size)) {
+    stop(
+      "Argument \".grid_size\" must be integer.",
+      call. = FALSE
+    )
+  }
+
+  # Check if .num_cores is integer
+  if (!is.integer(.num_cores)) {
+    stop(
+      "Argument \".num_cores\" must be integer.",
+      call. = FALSE
+    )
+  }
+
+  # Check if .model_type is either "regression" or "classification"
+  if (!.model_type %in% c("regression", "classification")) {
+    stop(
+      "Argument \".model_type\" must be either \"regression\" or \"classification\".", # nolint: line_length_linter.
+      call. = FALSE
+    )
+  }
+
+  # Check if .surrogate_model is logical
+  if (!is.logical(.surrogate_model)) {
+    stop(
+      "Argument \".surrogate_model\" must be logical.",
+      call. = FALSE
+    )
+  }
 
   f <- stats::as.formula(stringr::str_glue("{.target} ~ ."))
   .data$date <- NULL
@@ -1052,9 +1914,10 @@ train_svm_poly_model <- function(
 
   rec_obj <- healthyR.ai::hai_svm_poly_data_prepper(train, f)
 
-  best_metric <- switch (.model_type,
-                         "regression"     = "rmse",
-                         "classification" = "accuracy"
+  best_metric <- switch(
+    .model_type,
+    "regression"     = "rmse",
+    "classification" = "accuracy"
   )
 
   auto_svm <- healthyR.ai::hai_auto_svm_poly(
@@ -1132,6 +1995,30 @@ coeteris_paribus <- function(
     .target
 ) {
 
+  # Check if .model is a model
+  if (!inherits(.model, "parsnip_model")) {
+    stop(
+      "Argument \".model\" must be a \"parsnip\" model.",
+      call. = FALSE
+    )
+  }
+
+  # Check if .newdata is a data frame or a tibble
+  if (!inherits(.newdata, c("data.frame", "tbl", "tbl_df"))) {
+    stop(
+      "Argument \".newdata\" must be a data frame or a tibble.",
+      call. = FALSE
+    )
+  }
+
+  # Check if .target is a character
+  if (!is.character(.target)) {
+    stop(
+      "Argument \".target\" must be a character.",
+      call. = FALSE
+    )
+  }
+
   # create custom predict function
   pred <- function(model, newdata) {
     results <- stats::predict(model, newdata) |> dplyr::pull(.pred)
@@ -1169,7 +2056,7 @@ coeteris_paribus <- function(
 #' @param .yvar The second input.
 #' @param .zvar The dependent variable.
 #' @param .res 3D plot resolution.
-#' @param .use_rgl Boolean. If TRUE, a 3D plot is produced by the `{rgl}`
+#' @param .use_rgl Boolean. If TRUE, a 3D plot is produced by the `rgl`
 #' package.
 #'
 #' @return A `plotly` plot.
@@ -1181,9 +2068,73 @@ plant_performance_map <- function(
     .xvar,
     .yvar,
     .zvar,
-    .res = 16, # 3d plot resolution
+    .res     = 16L, # 3d plot resolution
     .use_rgl = FALSE # just return the plotly plot
 ) {
+
+  # Check if .model is a parsnip model
+  if (!inherits(.model, "parsnip_model")) {
+    stop(
+      "Argument \".model\" must be a \"parsnip\" model.",
+      call. = FALSE
+    )
+  }
+
+  # Check if .data is a data frame or a tibble
+  if (!inherits(.data, c("data.frame", "tbl", "tbl_df"))) {
+    stop(
+      "Argument \".data\" must be a data frame or a tibble.",
+      call. = FALSE
+    )
+  }
+
+  # Check if .xvar is a character
+  if (!is.character(.xvar)) {
+    stop(
+      "Argument \".xvar\" must be a character.",
+      call. = FALSE
+    )
+  }
+
+  # Check if .yvar is a character
+  if (!is.character(.yvar)) {
+    stop(
+      "Argument \".yvar\" must be a character.",
+      call. = FALSE
+    )
+  }
+
+  # Check if .zvar is a character
+  if (!is.character(.zvar)) {
+    stop(
+      "Argument \".zvar\" must be a character.",
+      call. = FALSE
+    )
+  }
+
+  # Check if .res is an integer
+  if (!is.integer(.res)) {
+    stop(
+      "Argument \".res\" must be an integer.",
+      call. = FALSE
+    )
+  }
+
+  # Check if .use_rgl is a logical
+  if (!is.logical(.use_rgl)) {
+    stop(
+      "Argument \".use_rgl\" must be a logical.",
+      call. = FALSE
+    )
+  }
+
+  # Check if .xvar, .yvar, and .zvar are in .data
+  if (!all(c(.xvar, .yvar, .zvar) %in% names(.data))) {
+    stop(
+      "Arguments \"._var\" must be in \".data\".",
+      call. = FALSE
+    )
+  }
 
   # create custom predict function
   pred <- function(model, newdata) {
@@ -1327,10 +2278,56 @@ optimize_with_jaya <- function(
     .vars,
     .lower,
     .upper,
-    .maxiter = 10,
+    .maxiter = 10L,
     .option  = "minimize",
     .seed    = NULL
 ) {
+
+  # Check if .model is a parsnip model
+  if (!inherits(.model, "parsnip_model")) {
+    stop("The model must be a parsnip model.")
+  }
+
+  # Check if .vars is a character vector
+  if (!is.character(.vars)) {
+    stop("The variables must be a character vector.")
+  }
+
+  # Check if .lower is a numeric vector whith the same length as .vars
+  if (!is.numeric(.lower) || length(.lower) != length(.vars)) {
+    stop(
+      stringr::str_glue("The lower bounds must be a numeric vector with length equal to ({length(.vars)}).") # nolint: line_length_linter.
+    )
+  }
+
+  # Check if .upper is a numeric vector whith the same length as .vars
+  if (!is.numeric(.upper) || length(.upper) != length(.vars)) {
+    stop(
+      stringr::str_glue("The upper bounds must be a numeric vector with length equal to ({length(.vars)}).") # nolint: line_length_linter.
+    )
+  }
+
+  # Check if .maxiter is an integer
+  if (!is.integer(.maxiter)) {
+    stop("The maximum number of iterations must be an integer.")
+  }
+
+  # Check if .option is a string
+  if (!is.character(.option)) {
+    stop("The option must be a string.")
+  }
+
+  # Check if .option is either "maximize" or "minimize"
+  if (!.option %in% c("maximize", "minimize")) {
+    stop("The option must be either 'maximize' or 'minimize'.")
+  }
+
+  # Check if .seed is an integer vector
+  if (!is.null(.seed)) {
+    if (!is.integer(.seed)) {
+      stop("The seed must be an integer vector.")
+    }
+  }
 
   ## create custom predict function
   pred <- function(x) {
@@ -1376,9 +2373,55 @@ optimize_with_cobyla <- function(
     .lower,
     .upper,
     .x0,
-    .maxiter = 10,
+    .maxiter = 10L,
     .option  = "minimize"
 ) {
+
+  # Check if .model is a parsnip model
+  if (!inherits(.model, "parsnip_model")) {
+    stop("The model must be a parsnip model.")
+  }
+
+  # Check if .vars is a character vector
+  if (!is.character(.vars)) {
+    stop("The variables must be a character vector.")
+  }
+
+  # Check if .lower is a numeric vector whith the same length as .vars
+  if (!is.numeric(.lower) || length(.lower) != length(.vars)) {
+    stop(
+      stringr::str_glue("The lower bounds must be a numeric vector with length equal to ({length(.vars)}).") # nolint: line_length_linter.
+    )
+  }
+
+  # Check if .upper is a numeric vector whith the same length as .vars
+  if (!is.numeric(.upper) || length(.upper) != length(.vars)) {
+    stop(
+      stringr::str_glue("The upper bounds must be a numeric vector with length equal to ({length(.vars)}).") # nolint: line_length_linter.
+    )
+  }
+
+  # Check if .x0 is a numeric vector whith the same length as .vars
+  if (!is.numeric(.x0) || length(.x0) != length(.vars)) {
+    stop(
+      stringr::str_glue("The starting point must be a numeric vector with length equal to ({length(.vars)}).") # nolint: line_length_linter.
+    )
+  }
+
+  # Check if .maxiter is an integer
+  if (!is.integer(.maxiter)) {
+    stop("The maximum number of iterations must be an integer.")
+  }
+
+  # Check if .option is a string
+  if (!is.character(.option)) {
+    stop("The option must be a string.")
+  }
+
+  # Check if .option is either "maximize" or "minimize"
+  if (!.option %in% c("maximize", "minimize")) {
+    stop("The option must be either 'maximize' or 'minimize'.")
+  }
 
   ## create custom predict function
   pred <- function(x) {
@@ -1389,7 +2432,7 @@ optimize_with_cobyla <- function(
 
     results <- stats::predict(.model, newdata) |> dplyr::pull(.pred)
 
-    mult <- switch (
+    mult <- switch(
       .option,
       "minimize" = 1,
       "minimise" = 1,
@@ -1438,10 +2481,59 @@ optimize_with_spaceballs_princess <- function(
     .lower,
     .upper,
     .eps           = 0.3,
-    .maxiter       = 10,
+    .maxiter       = 10L,
     .option        = "minimize",
     .use_all_cores = FALSE
 ) {
+
+  # Check if .model is a parsnip model
+  if (!inherits(.model, "parsnip_model")) {
+    stop("The model must be a parsnip model.")
+  }
+
+  # Check if .vars is a character vector
+  if (!is.character(.vars)) {
+    stop("The variables must be a character vector.")
+  }
+
+  # Check if .lower is a numeric vector whith the same length as .vars
+  if (!is.numeric(.lower) || length(.lower) != length(.vars)) {
+    stop(
+      stringr::str_glue("The lower bounds must be a numeric vector with length equal to ({length(.vars)}).") # nolint: line_length_linter.
+    )
+  }
+
+  # Check if .upper is a numeric vector whith the same length as .vars
+  if (!is.numeric(.upper) || length(.upper) != length(.vars)) {
+    stop(
+      stringr::str_glue("The upper bounds must be a numeric vector with length equal to ({length(.vars)}).") # nolint: line_length_linter.
+    )
+  }
+
+  # Check if .eps is numeric
+  if (!is.numeric(.eps)) {
+    stop("The convergence control parameter must be numeric.")
+  }
+
+  # Check if .maxiter is an integer
+  if (!is.integer(.maxiter)) {
+    stop("The maximum number of iterations must be an integer.")
+  }
+
+  # Check if .option is a string
+  if (!is.character(.option)) {
+    stop("The option must be a string.")
+  }
+
+  # Check if .option is either "maximize" or "minimize"
+  if (!.option %in% c("maximize", "minimize")) {
+    stop("The option must be either 'maximize' or 'minimize'.")
+  }
+
+  #Check if .use_all_cores is a logical
+  if (!is.logical(.use_all_cores)) {
+    stop("The use_all_cores flag must be a logical.")
+  }
 
   ## create custom predict function
   pred <- function(x) {
@@ -1456,12 +2548,13 @@ optimize_with_spaceballs_princess <- function(
 
   }
 
-  minimize <- switch (.option,
-                      "minimize" = TRUE,
-                      "minimise" = TRUE,
-                      "min"      = TRUE,
-                      "Min"      = TRUE,
-                      FALSE
+  minimize <- switch(
+    .option,
+    "minimize" = TRUE,
+    "minimise" = TRUE,
+    "min"      = TRUE,
+    "Min"      = TRUE,
+    FALSE
   )
 
   ## solve problem

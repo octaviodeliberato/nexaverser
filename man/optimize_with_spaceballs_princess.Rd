@@ -10,7 +10,7 @@ optimize_with_spaceballs_princess(
   .lower,
   .upper,
   .eps = 0.3,
-  .maxiter = 10,
+  .maxiter = 10L,
   .option = "minimize",
   .use_all_cores = FALSE
 )

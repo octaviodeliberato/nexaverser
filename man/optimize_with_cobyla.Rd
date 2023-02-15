@@ -10,7 +10,7 @@ optimize_with_cobyla(
   .lower,
   .upper,
   .x0,
-  .maxiter = 10,
+  .maxiter = 10L,
   .option = "minimize"
 )
 }

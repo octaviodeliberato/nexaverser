@@ -12,7 +12,7 @@ select_features_with_pps(
   .task = "regression",
   .cutoff = 0.15,
   .parallel = FALSE,
-  .max_cores = -1
+  .max_cores = -1L
 )
 }
 \arguments{

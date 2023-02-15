@@ -23,37 +23,66 @@ select_features_with_boruta <- function(
 
   # Check if .tag_dat inherits from either a "data.frame" or a "tibble".
   if (!inherits(.tag_dat, c("data.frame", "tbl", "tbl_df"))) {
-    stop("The data must be a data.frame or a tibble.")
+    stop(
+      "The data must be a data.frame or a tibble.",
+      call. = FALSE
+    )
   }
 
   # Check if .tag_dat has a date column.
   if (!"date" %in% names(.tag_dat)) {
-    stop("The data must have a date column.")
+    stop(
+      "The data must have a date column.",
+      call. = FALSE
+    )
   }
 
   # Check if .target is a string.
   if (!is.character(.target)) {
-    stop("The target variable must be a string.")
+    stop(
+      "The target variable must be a string.",
+      call. = FALSE
+    )
+  }
+
+  # Check if .target is in .tag_dat
+  if (!.target %in% colnames(.tag_dat)) {
+    stop(
+      "Argument \".target\" must be a column in \".data\".",
+      call. = FALSE
+    )
   }
 
   # Check if .balance is a logical.
   if (!is.logical(.balance)) {
-    stop("The balance argument must be a logical.")
+    stop(
+      "The balance argument must be a logical.",
+      call. = FALSE
+    )
   }
 
   # Check if .with_tentative is a logical.
   if (!is.logical(.with_tentative)) {
-    stop("The with_tentative argument must be a logical.")
+    stop(
+      "The with_tentative argument must be a logical.",
+      call. = FALSE
+    )
   }
 
   # Check if .return_data is a logical.
   if (!is.logical(.return_data)) {
-    stop("The return_data argument must be a logical.")
+    stop(
+      "The return_data argument must be a logical.",
+      call. = FALSE
+    )
   }
 
   # Check if .task is either "regression" or "classification".
   if (!.task %in% c("regression", "classification")) {
-    stop("The task argument must be either 'regression' or 'classification'.")
+    stop(
+      "The task argument must be either 'regression' or 'classification'.",
+      call. = FALSE
+    )
   }
 
   set.seed(1)
@@ -158,47 +187,82 @@ select_features_with_trex <- function(
 
   # Check if .tag_dat inherits from either a "data.frame" or a "tibble".
   if (!inherits(.tag_dat, c("data.frame", "tbl", "tbl_df"))) {
-    stop("The data must be a data.frame or a tibble.")
+    stop(
+      "The data must be a data.frame or a tibble.",
+      call. = FALSE
+    )
   }
 
   # Check if .tag_dat has a date column.
   if (!"date" %in% names(.tag_dat)) {
-    stop("The data must have a date column.")
+    stop(
+      "The data must have a date column.",
+      call. = FALSE
+    )
   }
 
   # Check if .target is a string.
   if (!is.character(.target)) {
-    stop("The target variable must be a string.")
+    stop(
+      "The target variable must be a string.",
+      call. = FALSE
+    )
+  }
+
+  # Check if .target is in .tag_dat
+  if (!.target %in% colnames(.tag_dat)) {
+    stop(
+      "Argument \".target\" must be a column in \".data\".",
+      call. = FALSE
+    )
   }
 
   # Check if .balance is a logical.
   if (!is.logical(.balance)) {
-    stop("The balance argument must be a logical.")
+    stop(
+      "The balance argument must be a logical.",
+      call. = FALSE
+    )
   }
 
   # Check if .return_data is a logical.
   if (!is.logical(.return_data)) {
-    stop("The return_data argument must be a logical.")
+    stop(
+      "The return_data argument must be a logical.",
+      call. = FALSE
+    )
   }
 
   # Check if .task is either "regression" or "classification".
   if (!.task %in% c("regression", "classification")) {
-    stop("The task argument must be either 'regression' or 'classification'.")
+    stop(
+      "The task argument must be either 'regression' or 'classification'.",
+      call. = FALSE
+    )
   }
 
   # Check if .corr_max is a number.
   if (!is.numeric(.corr_max)) {
-    stop("The corr_max argument must be a number.")
+    stop(
+      "The corr_max argument must be a number.",
+      call. = FALSE
+    )
   }
 
   # Check if .parallel is a logical.
   if (!is.logical(.parallel)) {
-    stop("The parallel argument must be a logical.")
+    stop(
+      "The parallel argument must be a logical.",
+      call. = FALSE
+    )
   }
 
   # Check if .max_cores is an integer.
-  if (!is.integer(.max_cores)) {
-    stop("The max_cores argument must be an integer.")
+  if (!is.numeric(.max_cores)) {
+    stop(
+      "The max_cores argument must be a number.",
+      call. = FALSE
+    )
   }
 
   set.seed(1)
@@ -311,47 +375,79 @@ select_features_with_pps <- function(
     .task        = "regression",
     .cutoff      = 0.15,
     .parallel    = FALSE,
-    .max_cores   = -1
+    .max_cores   = -1L
 ) {
 
   # Check if .tag_dat is a data.frame or a tibble.
   if (!inherits(.tag_dat, c("data.frame", "tbl", "tbl_df"))) {
-    stop("The data must be a data.frame or a tibble.")
+    stop(
+      "The data must be a data.frame or a tibble.",
+      call. = FALSE
+    )
   }
 
   # Check if .target is a string.
   if (!is.character(.target)) {
-    stop("The target variable must be a string.")
+    stop(
+      "The target variable must be a string.",
+      call. = FALSE
+    )
+  }
+
+  # Check if .target is in .tag_dat
+  if (!.target %in% colnames(.tag_dat)) {
+    stop(
+      "Argument \".target\" must be a column in \".data\".",
+      call. = FALSE
+    )
   }
 
   # Check if .balance is a logical.
   if (!is.logical(.balance)) {
-    stop("The balance argument must be a logical.")
+    stop(
+      "The balance argument must be a logical.",
+      call. = FALSE
+    )
   }
 
   # Check if .return_data is a logical.
   if (!is.logical(.return_data)) {
-    stop("The return_data argument must be a logical.")
+    stop(
+      "The return_data argument must be a logical.",
+      call. = FALSE
+    )
   }
 
   # Check if .task is either "regression" or "classification".
   if (!.task %in% c("regression", "classification")) {
-    stop("The task argument must be either 'regression' or 'classification'.")
+    stop(
+      "The task argument must be either 'regression' or 'classification'.",
+      call. = FALSE
+    )
   }
 
   # Check if .cutoff is a number.
   if (!is.numeric(.cutoff)) {
-    stop("The cutoff argument must be a number.")
+    stop(
+      "The cutoff argument must be a number.",
+      call. = FALSE
+    )
   }
 
   # Check if .parallel is a logical.
   if (!is.logical(.parallel)) {
-    stop("The parallel argument must be a logical.")
+    stop(
+      "The parallel argument must be a logical.",
+      call. = FALSE
+    )
   }
 
   # Check if .max_cores is an integer.
   if (!is.integer(.max_cores)) {
-    stop("The max_cores argument must be an integer.")
+    stop(
+      "The max_cores argument must be an integer.",
+      call. = FALSE
+    )
   }
 
   set.seed(1)
@@ -442,21 +538,30 @@ select_features_with_pps <- function(
 #' @return A numeric vector.
 #' @export
 #'
-calc_p_value_granger_fit <- function(tag_x, tag_y, max_lag = 7) {
+calc_p_value_granger_fit <- function(tag_x, tag_y, max_lag = 7L) {
 
   # Check if tag_x is a numeric vector.
   if (!is.numeric(tag_x)) {
-    stop("The tag_x argument must be a numeric vector.")
+    stop(
+      "The tag_x argument must be a numeric vector.",
+      call. = FALSE
+    )
   }
 
   # Check if tag_y is a numeric vector.
   if (!is.numeric(tag_y)) {
-    stop("The tag_y argument must be a numeric vector.")
+    stop(
+      "The tag_y argument must be a numeric vector.",
+      call. = FALSE
+    )
   }
 
   # Check if max_lag is an integer.
   if (!is.integer(max_lag)) {
-    stop("The max_lag argument must be an integer.")
+    stop(
+      "The max_lag argument must be an integer.",
+      call. = FALSE
+    )
   }
 
   fit_granger <- vector(mode = "list", length = max_lag)
@@ -495,30 +600,49 @@ calc_p_value_granger_fit <- function(tag_x, tag_y, max_lag = 7) {
 run_causation_analysis <- function(
     .tag_dat,
     .target,
-    .max_lag = 7,
+    .max_lag = 7L,
     .assess  = NULL
 ) {
 
   # Check if .tag_dat inherits from a data.frame or a tibble.
   if (!inherits(.tag_dat, c("data.frame", "tbl", "tbl_df"))) {
-    stop("The tag_dat argument must inherit from a data.frame or a tibble.")
+    stop(
+      "The tag_dat argument must inherit from a data.frame or a tibble.",
+      call. = FALSE
+    )
   }
 
   # Check if .target is a character vector.
   if (!is.character(.target)) {
-    stop("The target argument must be a character vector.")
+    stop(
+      "The target argument must be a character vector.",
+      call. = FALSE
+    )
+  }
+
+  # Check if .target is a column in .tag_dat.
+  if (!.target %in% names(.tag_dat)) {
+    stop(
+      "The target argument must be a column in tag_dat.",
+      call. = FALSE
+    )
   }
 
   # Check if .max_lag is an integer.
   if (!is.integer(.max_lag)) {
-    stop("The max_lag argument must be an integer.")
+    stop(
+      "The max_lag argument must be an integer.",
+      call. = FALSE
+    )
   }
 
-  # Check if .assess is an integer.
-  if (!is.integer(.assess)) {
-    stop("The assess argument must be an integer.")
+  # Check if .assess is a number.
+  if (!is.null(.assess) && !is.numeric(.assess)) {
+    stop(
+      "The assess argument must be a number.",
+      call. = FALSE
+    )
   }
-
 
   x <- setdiff(names(.tag_dat), c("date", .target))
 

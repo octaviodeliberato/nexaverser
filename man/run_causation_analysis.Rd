@@ -4,7 +4,7 @@
 \alias{run_causation_analysis}
 \title{run_causation_analysis}
 \usage{
-run_causation_analysis(.tag_dat, .target, .max_lag = 7, .assess = NULL)
+run_causation_analysis(.tag_dat, .target, .max_lag = 7L, .assess = NULL)
 }
 \arguments{
 \item{.tag_dat}{A data frame with numeric data.}

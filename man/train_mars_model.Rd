@@ -10,8 +10,8 @@ train_mars_model(
   .prop = 0.8,
   .strat = FALSE,
   .tune = TRUE,
-  .grid_size = 10,
-  .num_cores = 1,
+  .grid_size = 10L,
+  .num_cores = 1L,
   .model_type = "regression",
   .surrogate_model = FALSE
 )

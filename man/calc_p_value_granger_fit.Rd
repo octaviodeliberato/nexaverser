@@ -4,7 +4,7 @@
 \alias{calc_p_value_granger_fit}
 \title{calc_p_value_granger_fit}
 \usage{
-calc_p_value_granger_fit(tag_x, tag_y, max_lag = 7)
+calc_p_value_granger_fit(tag_x, tag_y, max_lag = 7L)
 }
 \arguments{
 \item{tag_x}{An univariate series of observations.}

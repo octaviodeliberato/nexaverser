@@ -10,7 +10,7 @@ plant_performance_map(
   .xvar,
   .yvar,
   .zvar,
-  .res = 16,
+  .res = 16L,
   .use_rgl = FALSE
 )
 }
@@ -27,7 +27,7 @@ plant_performance_map(
 
 \item{.res}{3D plot resolution.}
 
-\item{.use_rgl}{Boolean. If TRUE, a 3D plot is produced by the \code{{rgl}}
+\item{.use_rgl}{Boolean. If TRUE, a 3D plot is produced by the \code{rgl}
 package.}
 }
 \value{
