@@ -4,7 +4,7 @@
 \alias{plot_tag_data}
 \title{plot_tag_data}
 \usage{
-plot_tag_data(.tag_dat, .ncol = 2, .nrow = 1, .loess = TRUE, .plotly = FALSE)
+plot_tag_data(.tag_dat, .ncol = 2L, .nrow = 1L, .loess = TRUE, .plotly = FALSE)
 }
 \arguments{
 \item{.tag_dat}{A data frame containing one date (dttm) and some numeric
@@ -20,7 +20,7 @@ columns.}
 interactive (plotly) visualization.}
 }
 \value{
-A static \code{ggplot2} plot or an interactive \code{plotly} plot.
+Static or interactive panel plots.
 }
 \description{
 This is a data viz function to automagically plot the time

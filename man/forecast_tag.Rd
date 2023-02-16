@@ -4,7 +4,7 @@
 \alias{forecast_tag}
 \title{forecast_tag}
 \usage{
-forecast_tag(.tag_dat, .ndays = 15, .interactive = FALSE)
+forecast_tag(.tag_dat, .ndays = 15L, .interactive = FALSE)
 }
 \arguments{
 \item{.tag_dat}{A time series with \code{date} (days) and \code{value} cols.}

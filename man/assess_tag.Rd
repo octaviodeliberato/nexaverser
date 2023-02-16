@@ -9,7 +9,7 @@ assess_tag(
   .pad = FALSE,
   .imp = FALSE,
   .clean = FALSE,
-  .per = 1,
+  .per = 1L,
   .std = FALSE,
   .chg_pts = TRUE,
   .smooth = FALSE,

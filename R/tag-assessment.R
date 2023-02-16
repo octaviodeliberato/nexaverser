@@ -16,16 +16,96 @@
 #' @param .plotly Returns either a static (ggplot2) visualization or an
 #' interactive (plotly) visualization.
 #'
-#' @return A static `ggplot2` plot or an interactive `plotly` plot.
+#' @return Static or interactive panel plots.
 #' @export
 #'
 plot_tag_data <- function(
     .tag_dat,
-    .ncol   = 2,
-    .nrow   = 1,
+    .ncol   = 2L,
+    .nrow   = 1L,
     .loess  = TRUE,
     .plotly = FALSE
 ) {
+
+  # Check if .tag_dat inherits from data.frame ot tibble
+  if (!inherits(.tag_dat, c("data.frame", "tbl", "tbl_df"))) {
+
+    rlang::abort(
+      message = "The supplied data must be a data frame or a tibble.",
+      use_cli_format = TRUE
+    )
+
+  }
+
+  # Check if .tag_dat has a date column
+  if (!"date" %in% names(.tag_dat)) {
+
+    rlang::abort(
+      message = "The supplied data must have a date column.",
+      use_cli_format = TRUE
+    )
+
+  }
+
+  # Check if .tag_dat has a value column
+  if (!"value" %in% names(.tag_dat)) {
+
+    rlang::abort(
+      message = "The supplied data must have a value column.",
+      use_cli_format = TRUE
+    )
+
+  }
+
+  # Check if .tag_dat has a name column
+  if (!"name" %in% names(.tag_dat)) {
+
+    rlang::abort(
+      message = "The supplied data must have a name column.",
+      use_cli_format = TRUE
+    )
+
+  }
+
+  # Check if .nrow is a positive integer
+  if (!is.integer(.nrow) || .nrow <= 0) {
+
+    rlang::abort(
+      message = "The supplied number of rows must be a positive integer.",
+      use_cli_format = TRUE
+    )
+
+  }
+
+  # Check if .ncol is a positive integer
+  if (!is.integer(.ncol) || .ncol <= 0) {
+
+    rlang::abort(
+      message = "The supplied number of columns must be a positive integer.",
+      use_cli_format = TRUE
+    )
+
+  }
+
+  # Check if .loess is a logical
+  if (!is.logical(.loess)) {
+
+    rlang::abort(
+      message = "The supplied loess argument must be a logical.",
+      use_cli_format = TRUE
+    )
+
+  }
+
+  # Check if .plotly is a logical
+  if (!is.logical(.plotly)) {
+
+    rlang::abort(
+      message = "The supplied plotly argument must be a logical.",
+      use_cli_format = TRUE
+    )
+
+  }
 
   g <- .tag_dat |>
     tidyr::pivot_longer(-date) |>
@@ -87,6 +167,26 @@ generate_trend_analysis_data <- function(
 
 plot_mavg_data <- function(data) {
 
+  # Check if data inherits from data.frame ot tibble
+  if (!inherits(data, c("data.frame", "tbl", "tbl_df"))) {
+
+    rlang::abort(
+      message = "The supplied data must be a data frame or a tibble.",
+      use_cli_format = TRUE
+    )
+
+  }
+
+  # Check if data has theh following columns: date, tag, mavg_short, mavg_long, diff_perc # nolint: line_length_linter.
+  if (!all(c("date", "tag", "mavg_short", "mavg_long", "diff_perc") %in% names(data))) { # nolint: line_length_linter.
+
+    rlang::abort(
+      message = "The supplied data must have the following columns: date, tag, mavg_short, mavg_long, diff_perc.", # nolint: line_length_linter.
+      use_cli_format = TRUE
+    )
+
+  }
+
   names(data) <- c("date", "tag", "mavg_short", "mavg_long", "diff_perc")
 
   cols <- c("tag" = "gray50", "mavg_short" = "red", "mavg_long" = "blue")
@@ -138,13 +238,64 @@ assess_tag <- function(
     .pad     = FALSE,
     .imp     = FALSE,
     .clean   = FALSE,
-    .per     = 1,
+    .per     = 1L,
     .std     = FALSE,
     .chg_pts = TRUE,
     .smooth  = FALSE,
     .anom    = TRUE,
     .alpha   = 0.1
 ) {
+
+  # Check if data inherits from data.frame ot tibble
+  if (!inherits(.tag_dat, c("data.frame", "tbl", "tbl_df"))) {
+
+    rlang::abort(
+      message = "The supplied data must be a data frame or a tibble.",
+      use_cli_format = TRUE
+    )
+
+  }
+
+  # Check if .tag_dat has exactly two columns
+  if (ncol(.tag_dat) != 2) {
+
+    rlang::abort(
+      message = "The supplied data must have exactly two columns.",
+      use_cli_format = TRUE
+    )
+
+  }
+
+  # Check if .per is a positive integer
+  if (!is.integer(.per) || .per < 1) {
+
+    rlang::abort(
+      message = "The supplied period must be a positive integer.",
+      use_cli_format = TRUE
+    )
+
+  }
+
+  # Check if .alpha is a number between 0 and 1
+  if (!is.numeric(.alpha) || .alpha < 0 || .alpha > 1) {
+
+    rlang::abort(
+      message = "The supplied alpha must be a number between 0 and 1.",
+      use_cli_format = TRUE
+    )
+
+  }
+
+  # Check if .pad, .imp, .clean, .std, .chg_pts, .smooth, .anom are logical
+  if (!all(sapply(c(.pad, .imp, .clean, .std, .chg_pts, .smooth, .anom),
+                  is.logical))) {
+
+    rlang::abort(
+      message = "The supplied arguments must be logical.",
+      use_cli_format = TRUE
+    )
+
+  }
 
   names(.tag_dat) <- c("date", "value")
 
@@ -360,7 +511,47 @@ assess_tag <- function(
 #' @return Either a `ggplot2` or a `plotly` plot.
 #' @export
 #'
-forecast_tag <- function(.tag_dat, .ndays = 15, .interactive = FALSE) {
+forecast_tag <- function(.tag_dat, .ndays = 15L, .interactive = FALSE) {
+
+  # Check if .tag_dat inherits either from data.frame or tibble
+  if (!inherits(.tag_dat, c("data.frame", "tbl", "tbl_df"))) {
+
+    rlang::abort(
+      message = "A data.frame or tibble must be supplied.",
+      use_cli_format = TRUE
+    )
+
+  }
+
+  # Check if .tag_dat has a date column and a value column
+  if (!all(c("date", "value") %in% names(.tag_dat))) {
+
+    rlang::abort(
+      message = "A data.frame or tibble must have a date and a value column.",
+      use_cli_format = TRUE
+    )
+
+  }
+
+  # Check if .ndays is a positive integer
+  if (!is.integer(.ndays) || .ndays <= 0) {
+
+    rlang::abort(
+      message = "The number of days must be a positive integer.",
+      use_cli_format = TRUE
+    )
+
+  }
+
+  # Check if .interactive is a logical
+  if (!is.logical(.interactive)) {
+
+    rlang::abort(
+      message = "The interactive argument must be a logical.",
+      use_cli_format = TRUE
+    )
+
+  }
 
   ds <- .tag_dat |>
     tibble::as_tibble() |>
@@ -451,6 +642,26 @@ forecast_tag <- function(.tag_dat, .ndays = 15, .interactive = FALSE) {
 #' @export
 #'
 impute_missing_values <- function(.tag_dat) {
+
+  # Check if .tag_dat inherits either from data.frame or tibble
+  if (!inherits(.tag_dat, c("data.frame", "tbl", "tbl_df"))) {
+
+    rlang::abort(
+      message = "A data.frame or tibble must be supplied.",
+      use_cli_format = TRUE
+    )
+
+  }
+
+  # Check if .tag_dat has a date column and a value column
+  if (!all(c("date", "value") %in% names(.tag_dat))) {
+
+    rlang::abort(
+      message = "A data.frame or tibble must have a date and a value column.",
+      use_cli_format = TRUE
+    )
+
+  }
 
   dates <- .tag_dat$date
 
