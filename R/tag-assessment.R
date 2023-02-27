@@ -47,21 +47,11 @@ plot_tag_data <- function(
 
   }
 
-  # Check if .tag_dat has a value column
-  if (!"value" %in% names(.tag_dat)) {
+  # Check if .ncol is a positive integer
+  if (!is.integer(.ncol) || .ncol <= 0) {
 
     rlang::abort(
-      message = "The supplied data must have a value column.",
-      use_cli_format = TRUE
-    )
-
-  }
-
-  # Check if .tag_dat has a name column
-  if (!"name" %in% names(.tag_dat)) {
-
-    rlang::abort(
-      message = "The supplied data must have a name column.",
+      message = "The supplied number of columns must be a positive integer.",
       use_cli_format = TRUE
     )
 
@@ -72,16 +62,6 @@ plot_tag_data <- function(
 
     rlang::abort(
       message = "The supplied number of rows must be a positive integer.",
-      use_cli_format = TRUE
-    )
-
-  }
-
-  # Check if .ncol is a positive integer
-  if (!is.integer(.ncol) || .ncol <= 0) {
-
-    rlang::abort(
-      message = "The supplied number of columns must be a positive integer.",
       use_cli_format = TRUE
     )
 
@@ -172,16 +152,6 @@ plot_mavg_data <- function(data) {
 
     rlang::abort(
       message = "The supplied data must be a data frame or a tibble.",
-      use_cli_format = TRUE
-    )
-
-  }
-
-  # Check if data has theh following columns: date, tag, mavg_short, mavg_long, diff_perc # nolint: line_length_linter.
-  if (!all(c("date", "tag", "mavg_short", "mavg_long", "diff_perc") %in% names(data))) { # nolint: line_length_linter.
-
-    rlang::abort(
-      message = "The supplied data must have the following columns: date, tag, mavg_short, mavg_long, diff_perc.", # nolint: line_length_linter.
       use_cli_format = TRUE
     )
 
@@ -523,11 +493,11 @@ forecast_tag <- function(.tag_dat, .ndays = 15L, .interactive = FALSE) {
 
   }
 
-  # Check if .tag_dat has a date column and a value column
-  if (!all(c("date", "value") %in% names(.tag_dat))) {
+  # Check if .tag_dat has a date column
+  if (!"date" %in% names(.tag_dat)) {
 
     rlang::abort(
-      message = "A data.frame or tibble must have a date and a value column.",
+      message = "A data.frame or tibble must have a date column.",
       use_cli_format = TRUE
     )
 
@@ -653,11 +623,11 @@ impute_missing_values <- function(.tag_dat) {
 
   }
 
-  # Check if .tag_dat has a date column and a value column
-  if (!all(c("date", "value") %in% names(.tag_dat))) {
+  # Check if .tag_dat has a date column
+  if (!"date" %in% names(.tag_dat)) {
 
     rlang::abort(
-      message = "A data.frame or tibble must have a date and a value column.",
+      message = "A data.frame or tibble must have a date column.",
       use_cli_format = TRUE
     )
 
@@ -693,5 +663,100 @@ impute_missing_values <- function(.tag_dat) {
   )
 
   return(imputed_data)
+
+}
+
+
+#' extract_anomalies
+#'
+#' @param data A data frame.
+#' @param date_col A string, the name of the date column.
+#' @param value_col A string, the name of the value column.
+#' @param alpha Controls the width of the "normal" range regarding anomaly
+#' detection. Lower values are more conservative while higher values are less
+#' prone to incorrectly classifying "normal" observations.
+#' @param anomaly A string, either "Yes" or "No".
+#'
+#' @return A data frame
+#' @export
+#'
+extract_anomalies <-
+function(data, date_col, value_col, alpha = 0.5, anomaly = "Yes") {
+
+  # Check if data inherits either from data.frame or tibble
+  if (!inherits(data, c("data.frame", "tbl", "tbl_df"))) {
+
+    rlang::abort(
+      message = "A data.frame or tibble must be supplied.",
+      use_cli_format = TRUE
+    )
+
+  }
+
+  # Check if date_col is a string
+  if (!is.character(date_col)) {
+
+    rlang::abort(
+      message = "date_col must be a string.",
+      use_cli_format = TRUE
+    )
+
+  }
+
+  # Check if value_col is a string
+  if (!is.character(value_col)) {
+
+    rlang::abort(
+      message = "value_col must be a string.",
+      use_cli_format = TRUE
+    )
+
+  }
+
+  # Check if alpha is a number between 0 and 1
+  if (!is.numeric(alpha) || alpha < 0 || alpha > 1) {
+
+    rlang::abort(
+      message = "alpha must be a number between 0 and 1.",
+      use_cli_format = TRUE
+    )
+
+  }
+
+  # Check if anomaly is a string, either "Yes" or "No"
+  if (!is.character(anomaly) || !(anomaly %in% c("Yes", "No"))) {
+
+    rlang::abort(
+      message = "anomaly must be a string, either 'Yes' or 'No'.",
+      use_cli_format = TRUE
+    )
+
+  }
+
+  if (anomaly == "Yes") {
+    data |>
+      dplyr::select(dplyr::all_of(c(date_col, value_col))) |>
+      anomalize::time_decompose(value_col) |>
+      anomalize::anomalize(remainder, alpha = alpha) |>
+      anomalize::time_recompose() |>
+      dplyr::filter(anomaly == "Yes") |>
+      dplyr::select(date, observed)
+  } else if (anomaly == "No") {
+    data |>
+      dplyr::select(dplyr::all_of(c(date_col, value_col))) |>
+      anomalize::time_decompose(value_col) |>
+      anomalize::anomalize(remainder, alpha = alpha) |>
+      anomalize::time_recompose() |>
+      dplyr::filter(anomaly == "No") |>
+      dplyr::select(date, observed)
+  } else {
+    data |>
+      dplyr::select(dplyr::all_of(c(date_col, value_col))) |>
+      anomalize::time_decompose(value_col) |>
+      anomalize::anomalize(remainder, alpha = alpha) |>
+      anomalize::time_recompose() |>
+      dplyr::select(date, observed, anomaly) |>
+      dplyr::mutate(anomaly = as.character(anomaly))
+  }
 
 }

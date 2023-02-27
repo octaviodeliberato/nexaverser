@@ -36,14 +36,6 @@ train_cubist_model <- function(
     )
   }
 
-  # Check if .data is a data frame with a `date` col.
-  if (!"date" %in% colnames(.data)) {
-    stop(
-      "Argument \".data\" must be a data frame with a `date` column.", # nolint: line_length_linter.
-      call. = FALSE
-    )
-  }
-
   # Check if .target is a string
   if (!is.character(.target)) {
     stop(
@@ -266,14 +258,6 @@ train_xgboost_model <- function(
     )
   }
 
-  # Check if .data is a data frame with a `date` col.
-  if (!"date" %in% colnames(.data)) {
-    stop(
-      "Argument \".data\" must be a data frame with a `date` column.", # nolint: line_length_linter.
-      call. = FALSE
-    )
-  }
-
   # Check if .target is a string
   if (!is.character(.target)) {
     stop(
@@ -481,14 +465,6 @@ train_mars_model <- function(
   if (!inherits(.data, c("data.frame", "tbl", "tbl_df"))) {
     stop(
       "Argument \".data\" must be a data.frame, tbl or tbl_df.",
-      call. = FALSE
-    )
-  }
-
-  # Check if .data is a data frame with a `date` col.
-  if (!"date" %in% colnames(.data)) {
-    stop(
-      "Argument \".data\" must be a data frame with a `date` column.", # nolint: line_length_linter.
       call. = FALSE
     )
   }
@@ -704,14 +680,6 @@ train_ranger_model <- function(
     )
   }
 
-  # Check if .data is a data frame with a `date` col.
-  if (!"date" %in% colnames(.data)) {
-    stop(
-      "Argument \".data\" must be a data frame with a `date` column.", # nolint: line_length_linter.
-      call. = FALSE
-    )
-  }
-
   # Check if .target is a string
   if (!is.character(.target)) {
     stop(
@@ -919,14 +887,6 @@ train_knn_model <- function(
   if (!inherits(.data, c("data.frame", "tbl", "tbl_df"))) {
     stop(
       "Argument \".data\" must be a data.frame, tbl or tbl_df.",
-      call. = FALSE
-    )
-  }
-
-  # Check if .data is a data frame with a `date` col.
-  if (!"date" %in% colnames(.data)) {
-    stop(
-      "Argument \".data\" must be a data frame with a `date` column.", # nolint: line_length_linter.
       call. = FALSE
     )
   }
@@ -1142,14 +1102,6 @@ train_glmnet_model <- function(
     )
   }
 
-  # Check if .data is a data frame with a `date` col.
-  if (!"date" %in% colnames(.data)) {
-    stop(
-      "Argument \".data\" must be a data frame with a `date` column.", # nolint: line_length_linter.
-      call. = FALSE
-    )
-  }
-
   # Check if .target is a string
   if (!is.character(.target)) {
     stop(
@@ -1357,14 +1309,6 @@ train_c50_model <- function(
   if (!inherits(.data, c("data.frame", "tbl", "tbl_df"))) {
     stop(
       "Argument \".data\" must be a data.frame, tbl or tbl_df.",
-      call. = FALSE
-    )
-  }
-
-  # Check if .data is a data frame with a `date` col.
-  if (!"date" %in% colnames(.data)) {
-    stop(
-      "Argument \".data\" must be a data frame with a `date` column.", # nolint: line_length_linter.
       call. = FALSE
     )
   }
@@ -1580,14 +1524,6 @@ train_svm_rbf_model <- function(
     )
   }
 
-  # Check if .data is a data frame with a `date` col.
-  if (!"date" %in% colnames(.data)) {
-    stop(
-      "Argument \".data\" must be a data frame with a `date` column.", # nolint: line_length_linter.
-      call. = FALSE
-    )
-  }
-
   # Check if .target is a string
   if (!is.character(.target)) {
     stop(
@@ -1795,14 +1731,6 @@ train_svm_poly_model <- function(
   if (!inherits(.data, c("data.frame", "tbl", "tbl_df"))) {
     stop(
       "Argument \".data\" must be a data.frame, tbl or tbl_df.",
-      call. = FALSE
-    )
-  }
-
-  # Check if .data is a data frame with a `date` col.
-  if (!"date" %in% colnames(.data)) {
-    stop(
-      "Argument \".data\" must be a data frame with a `date` column.", # nolint: line_length_linter.
       call. = FALSE
     )
   }
