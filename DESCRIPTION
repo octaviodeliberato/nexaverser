@@ -36,7 +36,9 @@ Imports:
     modeltime,
     nloptr,
     parsnip,
+    patrick,
     plotly,
+    pointblank,
     ppsr,
     purrr,
     qcc,
@@ -62,4 +64,6 @@ Imports:
     workflows,
     yardstick
 Suggests: 
-    rules
+    rules,
+    testthat (>= 3.0.0)
+Config/testthat/edition: 3

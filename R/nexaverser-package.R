@@ -7,6 +7,7 @@
 #' @importFrom modeltime stlm_arima_fit_impl
 #' @importFrom modeltime stlm_ets_fit_impl
 #' @importFrom modeltime tbats_fit_impl
+#' @importFrom patrick with_parameters_test_that
 #' @importFrom tibble tibble
 ## usethis namespace: end
 NULL

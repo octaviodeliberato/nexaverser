@@ -87,17 +87,32 @@ plot_tag_data <- function(
 
   }
 
-  g <- .tag_dat |>
-    tidyr::pivot_longer(-date) |>
-    timetk::plot_time_series(
-      .date_var    = date,
-      .value       = value,
-      .color_var   = name,
-      .smooth      = .loess,
-      .interactive = .plotly
-    ) +
-    trelliscopejs::facet_trelliscope(~ name, ncol = .ncol, nrow = .nrow,
-                                     scales = "free")
+  g <- tryCatch(
+    {
+      .tag_dat |>
+        tidyr::pivot_longer(-date) |>
+        timetk::plot_time_series(
+          .date_var    = date,
+          .value       = value, # nolint
+          .smooth      = .loess,
+          .interactive = .plotly
+        ) +
+        trelliscopejs::facet_trelliscope(~ name, ncol = .ncol, nrow = .nrow,
+                                         scales = "free")
+    },
+    error = function(e) {
+      .tag_dat |>
+        tidyr::pivot_longer(-date) |>
+        timetk::plot_time_series(
+          .date_var    = date,
+          .value       = value, # nolint
+          .smooth      = .loess,
+          .interactive = FALSE
+        ) +
+        trelliscopejs::facet_trelliscope(~ name, ncol = .ncol, nrow = .nrow,
+                                         scales = "free")
+    }
+  )
 
   return(g)
 
@@ -429,7 +444,7 @@ assess_tag <- function(
           xintercept = xintercept,
           color      = "steelblue",
           linetype   = "dashed",
-          size       = 1.3
+          linewidth  = 1.3
         )
 
     } else {
@@ -724,10 +739,10 @@ function(data, date_col, value_col, alpha = 0.5, anomaly = "Yes") {
   }
 
   # Check if anomaly is a string, either "Yes" or "No"
-  if (!is.character(anomaly) || !(anomaly %in% c("Yes", "No"))) {
+  if (!is.character(anomaly) || !(anomaly %in% c("Yes", "No", "Both"))) {
 
     rlang::abort(
-      message = "anomaly must be a string, either 'Yes' or 'No'.",
+      message = "anomaly must be a string, one of 'Yes', 'No' or 'Both'.",
       use_cli_format = TRUE
     )
 
