@@ -108,7 +108,7 @@ plot_tag_data <- function(
           .date_var    = date,
           .value       = value, # nolint
           .color_var   = name,  # nolint
-          .smooth      = .loess,
+          .smooth      = FALSE,
           .interactive = FALSE
         ) +
         trelliscopejs::facet_trelliscope(~ name, ncol = .ncol, nrow = .nrow,
