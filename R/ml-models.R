@@ -202,7 +202,7 @@ train_cubist_model <- function(
     data = df_test,
     mapping = ggplot2::aes(x = actual, y = pred)
   ) +
-    ggplot2::geom_abline(col = "green", lty = 2, lwd = 1) +
+    ggplot2::geom_smooth(col = "green", lty = 2, lwd = 1, method = "lm") +
     ggplot2::geom_point(alpha = 0.5) +
     ggplot2::coord_fixed(ratio = 1) +
     ggpp::geom_table(
@@ -413,7 +413,7 @@ train_xgboost_model <- function(
     data = df_test,
     mapping = ggplot2::aes(x = actual, y = pred)
   ) +
-    ggplot2::geom_abline(col = "green", lty = 2, lwd = 1) +
+    ggplot2::geom_smooth(col = "green", lty = 2, lwd = 1, method = "lm") +
     ggplot2::geom_point(alpha = 0.5) +
     ggplot2::coord_fixed(ratio = 1) +
     ggpp::geom_table(
@@ -624,7 +624,7 @@ train_mars_model <- function(
     data = df_test,
     mapping = ggplot2::aes(x = actual, y = pred)
   ) +
-    ggplot2::geom_abline(col = "green", lty = 2, lwd = 1) +
+    ggplot2::geom_smooth(col = "green", lty = 2, lwd = 1, method = "lm") +
     ggplot2::geom_point(alpha = 0.5) +
     ggplot2::coord_fixed(ratio = 1) +
     ggpp::geom_table(
@@ -835,7 +835,7 @@ train_ranger_model <- function(
     data = df_test,
     mapping = ggplot2::aes(x = actual, y = pred)
   ) +
-    ggplot2::geom_abline(col = "green", lty = 2, lwd = 1) +
+    ggplot2::geom_smooth(col = "green", lty = 2, lwd = 1, method = "lm") +
     ggplot2::geom_point(alpha = 0.5) +
     ggplot2::coord_fixed(ratio = 1) +
     ggpp::geom_table(
@@ -1046,7 +1046,7 @@ train_knn_model <- function(
     data = df_test,
     mapping = ggplot2::aes(x = actual, y = pred)
   ) +
-    ggplot2::geom_abline(col = "green", lty = 2, lwd = 1) +
+    ggplot2::geom_smooth(col = "green", lty = 2, lwd = 1, method = "lm") +
     ggplot2::geom_point(alpha = 0.5) +
     ggplot2::coord_fixed(ratio = 1) +
     ggpp::geom_table(
@@ -1257,7 +1257,7 @@ train_glmnet_model <- function(
     data = df_test,
     mapping = ggplot2::aes(x = actual, y = pred)
   ) +
-    ggplot2::geom_abline(col = "green", lty = 2, lwd = 1) +
+    ggplot2::geom_smooth(col = "green", lty = 2, lwd = 1, method = "lm") +
     ggplot2::geom_point(alpha = 0.5) +
     ggplot2::coord_fixed(ratio = 1) +
     ggpp::geom_table(
@@ -1468,7 +1468,7 @@ train_c50_model <- function(
     data = df_test,
     mapping = ggplot2::aes(x = actual, y = pred)
   ) +
-    ggplot2::geom_abline(col = "green", lty = 2, lwd = 1) +
+    ggplot2::geom_smooth(col = "green", lty = 2, lwd = 1, method = "lm") +
     ggplot2::geom_point(alpha = 0.5) +
     ggplot2::coord_fixed(ratio = 1) +
     ggpp::geom_table(
@@ -1679,7 +1679,7 @@ train_svm_rbf_model <- function(
     data = df_test,
     mapping = ggplot2::aes(x = actual, y = pred)
   ) +
-    ggplot2::geom_abline(col = "green", lty = 2, lwd = 1) +
+    ggplot2::geom_smooth(col = "green", lty = 2, lwd = 1, method = "lm") +
     ggplot2::geom_point(alpha = 0.5) +
     ggplot2::coord_fixed(ratio = 1) +
     ggpp::geom_table(
@@ -1890,7 +1890,7 @@ train_svm_poly_model <- function(
     data = df_test,
     mapping = ggplot2::aes(x = actual, y = pred)
   ) +
-    ggplot2::geom_abline(col = "green", lty = 2, lwd = 1) +
+    ggplot2::geom_smooth(col = "green", lty = 2, lwd = 1, method = "lm") +
     ggplot2::geom_point(alpha = 0.5) +
     ggplot2::coord_fixed(ratio = 1) +
     ggpp::geom_table(
