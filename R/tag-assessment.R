@@ -94,6 +94,7 @@ plot_tag_data <- function(
         timetk::plot_time_series(
           .date_var    = date,
           .value       = value, # nolint
+          .color_var   = name,  # nolint
           .smooth      = .loess,
           .interactive = .plotly
         ) +
@@ -106,6 +107,7 @@ plot_tag_data <- function(
         timetk::plot_time_series(
           .date_var    = date,
           .value       = value, # nolint
+          .color_var   = name,  # nolint
           .smooth      = .loess,
           .interactive = FALSE
         ) +
