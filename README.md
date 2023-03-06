@@ -158,6 +158,8 @@ rf_model[["test_plot"]]
 
 Finally, the variable importance of this model can be accessed with:
 
-``` r{vip}
+``` r
 rf_model$model$fit$fit$fit |> vip::vip()
 ```
+
+<img src="man/figures/README-vip-1.png" width="100%" />
