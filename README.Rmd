@@ -1,0 +1,105 @@
+---
+output: github_document
+---
+
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse  = TRUE,
+  comment   = "#>",
+  fig.path  = "man/figures/README-",
+  out.width = "100%"
+)
+```
+
+# nexaverser
+
+<!-- badges: start -->
+<!-- badges: end -->
+
+The goal of nexaverser is to facilitate data science initiatives at Nexa Resources by automating the most common tasks that are commonly performed in a data science project.
+
+## Installation
+
+You can install the development version of nexaverser from [GitHub](https://github.com/) with:
+
+``` r
+# install.packages("devtools")
+devtools::install_github("octaviodeliberato/nexaverser")
+```
+
+This is a basic example which shows you how to solve a common problem:
+
+## Data prep
+
+```{r data-prep}
+library(nexaverser)
+
+# Import data from belt filter S033
+tag_tbl <- nexaverser::fz_data
+
+# Define target output
+y <- "lb_fz_filtros033silw_zn"
+
+# Let's see the distribution of NAs across our data
+visdat::vis_miss(tag_tbl)
+
+# Let's keep only columns with at least 2/3 of valid data ...
+keep <- colMeans(!is.na(tag_tbl)) > 2/3
+table(keep)
+
+tag_imp <- tag_tbl[, keep] |>
+  # ... impute missing values and ...
+  nexaverser::impute_missing_values() |>
+  # ... get rid of outliers
+  purrr::map_df(\(x) {
+    if (class(x) != "Date") {
+      timetk::ts_clean_vec(x)
+    } else { x }
+  })
+
+# Last but not least, let's have a look at our data
+tag_imp |> dplyr::glimpse()
+```
+
+# Feature selection
+
+```{r feature-selection}
+# Now that we are happy with our prepared data, let's use `Boruta` to find the most important predictors to our model
+sel_features_1 <- nexaverser::select_features_with_boruta(
+  .tag_dat        = tag_imp,
+  .target         = y,
+  .balance        = FALSE,
+  .with_tentative = FALSE,
+  .return_data    = FALSE,
+  .task           = "regression"
+)
+
+# 'Final' dataset
+df <- tag_imp |>
+  dplyr::select(dplyr::all_of(c(sel_features_1, y)))
+```
+
+The selected variables are: `r paste(sel_features_1, collapse = ", ")`. The target variable is: `r y`
+
+## Modeling
+
+There are many modeling techniques to choose from `{nexaverser}`. for this particular example, we will use the mighty random forest.
+
+```{r modeling}
+rf_model <- nexaverser::train_ranger_model(
+  .data            = df,
+  .target          = y,
+  .strat           = FALSE,
+  .tune            = FALSE,
+  .surrogate_model = TRUE
+)
+
+rf_model[["test_plot"]]
+```
+
+Finally, the variable importance of this model can be accessed with:
+
+```r{vip}
+rf_model$model$fit$fit$fit |> vip::vip()
+```
