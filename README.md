@@ -112,7 +112,7 @@ tag_imp |> dplyr::glimpse()
 #> $ lb_fz_filtros033silw_zn  <dbl> 0.420, 0.580, 0.820, 0.920, 0.850, 0.350, 0.9…
 ```
 
-# Feature selection
+## Feature selection
 
 ``` r
 # Now that we are happy with our prepared data, let's use `Boruta` to find the most important predictors to our model

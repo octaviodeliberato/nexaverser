@@ -62,7 +62,7 @@ tag_imp <- tag_tbl[, keep] |>
 tag_imp |> dplyr::glimpse()
 ```
 
-# Feature selection
+## Feature selection
 
 ```{r feature-selection}
 # Now that we are happy with our prepared data, let's use `Boruta` to find the most important predictors to our model
