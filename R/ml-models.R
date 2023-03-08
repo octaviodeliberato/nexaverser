@@ -210,12 +210,11 @@ train_cubist_model <- function(
       ggplot2::aes(x = x, y = y, label = tb)
     )
 
-  return(
-    list(
-      model     = best_model,
-      test_plot = g
-    )
-  )
+  auto_cube$test_plot <- g
+
+  auto_cube$model <- best_model
+
+  return(auto_cube)
 
 }
 
@@ -383,50 +382,53 @@ train_xgboost_model <- function(
 
   best_model <- auto_xgboost$model_info$fitted_wflw
 
-  # Check performance
-  test_pred <- stats::predict(best_model, new_data = test)
+  if (.model_type == "regression") {
 
-  df_test <- tibble::tibble(
-    actual = test[[.target]],
-    pred   = test_pred$.pred
-  )
+    # Check performance
+    test_pred <- stats::predict(best_model, new_data = test)
 
-  mod_rmse     <- yardstick::rmse_vec(df_test$actual, df_test$pred)
-  mod_mae      <- yardstick::mae_vec(df_test$actual, df_test$pred)
-  mod_rsq_trad <- yardstick::rsq_trad_vec(df_test$actual, df_test$pred)
-  mod_acc      <- 100 - yardstick::smape_vec(df_test$actual, df_test$pred)
-
-  tb <- tibble::tibble(
-    rmse = mod_rmse |> round(2),
-    mae  = mod_mae |> round(2),
-    r2   = mod_rsq_trad |> round(2),
-    acc  = mod_acc |> round(1)
-  )
-
-  inset_tbl <- tibble::tibble(
-    x = df_test$actual[2],
-    y = df_test$pred |> max(),
-    tb = list(tb)
-  )
-
-  g <- ggplot2::ggplot(
-    data = df_test,
-    mapping = ggplot2::aes(x = actual, y = pred)
-  ) +
-    ggplot2::geom_smooth(col = "green", lty = 2, lwd = 1, method = "lm") +
-    ggplot2::geom_point(alpha = 0.5) +
-    ggplot2::coord_fixed(ratio = 1) +
-    ggpp::geom_table(
-      data = inset_tbl,
-      ggplot2::aes(x = x, y = y, label = tb)
+    df_test <- tibble::tibble(
+      actual = test[[.target]],
+      pred   = test_pred$.pred
     )
 
-  return(
-    list(
-      model     = best_model,
-      test_plot = g
+    mod_rmse     <- yardstick::rmse_vec(df_test$actual, df_test$pred)
+    mod_mae      <- yardstick::mae_vec(df_test$actual, df_test$pred)
+    mod_rsq_trad <- yardstick::rsq_trad_vec(df_test$actual, df_test$pred)
+    mod_acc      <- 100 - yardstick::smape_vec(df_test$actual, df_test$pred)
+
+    tb <- tibble::tibble(
+      rmse = mod_rmse |> round(2),
+      mae  = mod_mae |> round(2),
+      r2   = mod_rsq_trad |> round(2),
+      acc  = mod_acc |> round(1)
     )
-  )
+
+    inset_tbl <- tibble::tibble(
+      x = df_test$actual[2],
+      y = df_test$pred |> max(),
+      tb = list(tb)
+    )
+
+    g <- ggplot2::ggplot(
+      data = df_test,
+      mapping = ggplot2::aes(x = actual, y = pred)
+    ) +
+      ggplot2::geom_smooth(col = "green", lty = 2, lwd = 1, method = "lm") +
+      ggplot2::geom_point(alpha = 0.5) +
+      ggplot2::coord_fixed(ratio = 1) +
+      ggpp::geom_table(
+        data = inset_tbl,
+        ggplot2::aes(x = x, y = y, label = tb)
+      )
+
+    auto_xgboost$test_plot <- g
+
+  }
+
+  auto_xgboost$model <- best_model
+
+  return(auto_xgboost)
 
 }
 
@@ -594,50 +596,53 @@ train_mars_model <- function(
 
   best_model <- auto_earth$model_info$fitted_wflw
 
-  # Check performance
-  test_pred <- stats::predict(best_model, new_data = test)
+  if (.model_type == "regression") {
 
-  df_test <- tibble::tibble(
-    actual = test[[.target]],
-    pred   = test_pred$.pred
-  )
+    # Check performance
+    test_pred <- stats::predict(best_model, new_data = test)
 
-  mod_rmse     <- yardstick::rmse_vec(df_test$actual, df_test$pred)
-  mod_mae      <- yardstick::mae_vec(df_test$actual, df_test$pred)
-  mod_rsq_trad <- yardstick::rsq_trad_vec(df_test$actual, df_test$pred)
-  mod_acc      <- 100 - yardstick::smape_vec(df_test$actual, df_test$pred)
-
-  tb <- tibble::tibble(
-    rmse = mod_rmse |> round(2),
-    mae  = mod_mae |> round(2),
-    r2   = mod_rsq_trad |> round(2),
-    acc  = mod_acc |> round(1)
-  )
-
-  inset_tbl <- tibble::tibble(
-    x = df_test$actual[2],
-    y = df_test$pred |> max(),
-    tb = list(tb)
-  )
-
-  g <- ggplot2::ggplot(
-    data = df_test,
-    mapping = ggplot2::aes(x = actual, y = pred)
-  ) +
-    ggplot2::geom_smooth(col = "green", lty = 2, lwd = 1, method = "lm") +
-    ggplot2::geom_point(alpha = 0.5) +
-    ggplot2::coord_fixed(ratio = 1) +
-    ggpp::geom_table(
-      data = inset_tbl,
-      ggplot2::aes(x = x, y = y, label = tb)
+    df_test <- tibble::tibble(
+      actual = test[[.target]],
+      pred   = test_pred$.pred
     )
 
-  return(
-    list(
-      model     = best_model,
-      test_plot = g
+    mod_rmse     <- yardstick::rmse_vec(df_test$actual, df_test$pred)
+    mod_mae      <- yardstick::mae_vec(df_test$actual, df_test$pred)
+    mod_rsq_trad <- yardstick::rsq_trad_vec(df_test$actual, df_test$pred)
+    mod_acc      <- 100 - yardstick::smape_vec(df_test$actual, df_test$pred)
+
+    tb <- tibble::tibble(
+      rmse = mod_rmse |> round(2),
+      mae  = mod_mae |> round(2),
+      r2   = mod_rsq_trad |> round(2),
+      acc  = mod_acc |> round(1)
     )
-  )
+
+    inset_tbl <- tibble::tibble(
+      x = df_test$actual[2],
+      y = df_test$pred |> max(),
+      tb = list(tb)
+    )
+
+    g <- ggplot2::ggplot(
+      data = df_test,
+      mapping = ggplot2::aes(x = actual, y = pred)
+    ) +
+      ggplot2::geom_smooth(col = "green", lty = 2, lwd = 1, method = "lm") +
+      ggplot2::geom_point(alpha = 0.5) +
+      ggplot2::coord_fixed(ratio = 1) +
+      ggpp::geom_table(
+        data = inset_tbl,
+        ggplot2::aes(x = x, y = y, label = tb)
+      )
+
+    auto_earth$test_plot <- g
+
+  }
+
+  auto_earth$model <- best_model
+
+  return(auto_earth)
 
 }
 
@@ -805,50 +810,53 @@ train_ranger_model <- function(
 
   best_model <- auto_ranger$model_info$fitted_wflw
 
-  # Check performance
-  test_pred <- stats::predict(best_model, new_data = test)
+  if (.model_type == "regression") {
 
-  df_test <- tibble::tibble(
-    actual = test[[.target]],
-    pred   = test_pred$.pred
-  )
+    # Check performance
+    test_pred <- stats::predict(best_model, new_data = test)
 
-  mod_rmse     <- yardstick::rmse_vec(df_test$actual, df_test$pred)
-  mod_mae      <- yardstick::mae_vec(df_test$actual, df_test$pred)
-  mod_rsq_trad <- yardstick::rsq_trad_vec(df_test$actual, df_test$pred)
-  mod_acc      <- 100 - yardstick::smape_vec(df_test$actual, df_test$pred)
-
-  tb <- tibble::tibble(
-    rmse = mod_rmse |> round(2),
-    mae  = mod_mae |> round(2),
-    r2   = mod_rsq_trad |> round(2),
-    acc  = mod_acc |> round(1)
-  )
-
-  inset_tbl <- tibble::tibble(
-    x = df_test$actual[2],
-    y = df_test$pred |> max(),
-    tb = list(tb)
-  )
-
-  g <- ggplot2::ggplot(
-    data = df_test,
-    mapping = ggplot2::aes(x = actual, y = pred)
-  ) +
-    ggplot2::geom_smooth(col = "green", lty = 2, lwd = 1, method = "lm") +
-    ggplot2::geom_point(alpha = 0.5) +
-    ggplot2::coord_fixed(ratio = 1) +
-    ggpp::geom_table(
-      data = inset_tbl,
-      ggplot2::aes(x = x, y = y, label = tb)
+    df_test <- tibble::tibble(
+      actual = test[[.target]],
+      pred   = test_pred$.pred
     )
 
-  return(
-    list(
-      model     = best_model,
-      test_plot = g
+    mod_rmse     <- yardstick::rmse_vec(df_test$actual, df_test$pred)
+    mod_mae      <- yardstick::mae_vec(df_test$actual, df_test$pred)
+    mod_rsq_trad <- yardstick::rsq_trad_vec(df_test$actual, df_test$pred)
+    mod_acc      <- 100 - yardstick::smape_vec(df_test$actual, df_test$pred)
+
+    tb <- tibble::tibble(
+      rmse = mod_rmse |> round(2),
+      mae  = mod_mae |> round(2),
+      r2   = mod_rsq_trad |> round(2),
+      acc  = mod_acc |> round(1)
     )
-  )
+
+    inset_tbl <- tibble::tibble(
+      x = df_test$actual[2],
+      y = df_test$pred |> max(),
+      tb = list(tb)
+    )
+
+    g <- ggplot2::ggplot(
+      data = df_test,
+      mapping = ggplot2::aes(x = actual, y = pred)
+    ) +
+      ggplot2::geom_smooth(col = "green", lty = 2, lwd = 1, method = "lm") +
+      ggplot2::geom_point(alpha = 0.5) +
+      ggplot2::coord_fixed(ratio = 1) +
+      ggpp::geom_table(
+        data = inset_tbl,
+        ggplot2::aes(x = x, y = y, label = tb)
+      )
+
+    auto_ranger$test_plot <- g
+
+  }
+
+  auto_ranger$model <- best_model
+
+  return(auto_ranger)
 
 }
 
@@ -1016,50 +1024,53 @@ train_knn_model <- function(
 
   best_model <- auto_knn$model_info$fitted_wflw
 
-  # Check performance
-  test_pred <- stats::predict(best_model, new_data = test)
+  if (.model_type == "regression") {
 
-  df_test <- tibble::tibble(
-    actual = test[[.target]],
-    pred   = test_pred$.pred
-  )
+    # Check performance
+    test_pred <- stats::predict(best_model, new_data = test)
 
-  mod_rmse     <- yardstick::rmse_vec(df_test$actual, df_test$pred)
-  mod_mae      <- yardstick::mae_vec(df_test$actual, df_test$pred)
-  mod_rsq_trad <- yardstick::rsq_trad_vec(df_test$actual, df_test$pred)
-  mod_acc      <- 100 - yardstick::smape_vec(df_test$actual, df_test$pred)
-
-  tb <- tibble::tibble(
-    rmse = mod_rmse |> round(2),
-    mae  = mod_mae |> round(2),
-    r2   = mod_rsq_trad |> round(2),
-    acc  = mod_acc |> round(1)
-  )
-
-  inset_tbl <- tibble::tibble(
-    x = df_test$actual[2],
-    y = df_test$pred |> max(),
-    tb = list(tb)
-  )
-
-  g <- ggplot2::ggplot(
-    data = df_test,
-    mapping = ggplot2::aes(x = actual, y = pred)
-  ) +
-    ggplot2::geom_smooth(col = "green", lty = 2, lwd = 1, method = "lm") +
-    ggplot2::geom_point(alpha = 0.5) +
-    ggplot2::coord_fixed(ratio = 1) +
-    ggpp::geom_table(
-      data = inset_tbl,
-      ggplot2::aes(x = x, y = y, label = tb)
+    df_test <- tibble::tibble(
+      actual = test[[.target]],
+      pred   = test_pred$.pred
     )
 
-  return(
-    list(
-      model     = best_model,
-      test_plot = g
+    mod_rmse     <- yardstick::rmse_vec(df_test$actual, df_test$pred)
+    mod_mae      <- yardstick::mae_vec(df_test$actual, df_test$pred)
+    mod_rsq_trad <- yardstick::rsq_trad_vec(df_test$actual, df_test$pred)
+    mod_acc      <- 100 - yardstick::smape_vec(df_test$actual, df_test$pred)
+
+    tb <- tibble::tibble(
+      rmse = mod_rmse |> round(2),
+      mae  = mod_mae |> round(2),
+      r2   = mod_rsq_trad |> round(2),
+      acc  = mod_acc |> round(1)
     )
-  )
+
+    inset_tbl <- tibble::tibble(
+      x = df_test$actual[2],
+      y = df_test$pred |> max(),
+      tb = list(tb)
+    )
+
+    g <- ggplot2::ggplot(
+      data = df_test,
+      mapping = ggplot2::aes(x = actual, y = pred)
+    ) +
+      ggplot2::geom_smooth(col = "green", lty = 2, lwd = 1, method = "lm") +
+      ggplot2::geom_point(alpha = 0.5) +
+      ggplot2::coord_fixed(ratio = 1) +
+      ggpp::geom_table(
+        data = inset_tbl,
+        ggplot2::aes(x = x, y = y, label = tb)
+      )
+
+    auto_knn$test_plot <- g
+
+  }
+
+  auto_knn$model <- best_model
+
+  return(auto_knn)
 
 }
 
@@ -1075,7 +1086,7 @@ train_knn_model <- function(
 #' workflow.
 #' @param .grid_size Default is 10.
 #' @param .num_cores Default is 1.
-#' @param .model_type Default is `regression`, can also be `classification.`
+#' @param .model_type Must be `classification.`
 #' @param .surrogate_model Logical, whether or not to conduct surrogate
 #' modeling, i.e., use all data to train the model.
 #'
@@ -1090,7 +1101,7 @@ train_glmnet_model <- function(
     .tune            = TRUE,
     .grid_size       = 10L,
     .num_cores       = 1L,
-    .model_type      = "regression",
+    .model_type      = "classification",
     .surrogate_model = FALSE
 ) {
 
@@ -1167,9 +1178,9 @@ train_glmnet_model <- function(
   }
 
   # Check if .model_type is either "regression" or "classification"
-  if (!.model_type %in% c("regression", "classification")) {
+  if (.model_type != "classification") {
     stop(
-      "Argument \".model_type\" must be either \"regression\" or \"classification\".", # nolint: line_length_linter.
+      "Argument \".model_type\" must be \"classification\".",
       call. = FALSE
     )
   }
@@ -1209,11 +1220,7 @@ train_glmnet_model <- function(
 
   rec_obj <- healthyR.ai::hai_glmnet_data_prepper(train, f)
 
-  best_metric <- switch(
-    .model_type,
-    "regression"     = "rmse",
-    "classification" = "accuracy"
-  )
+  best_metric <- "accuracy"
 
   auto_glmnet <- healthyR.ai::hai_auto_glmnet(
     .data        = train,
@@ -1225,52 +1232,9 @@ train_glmnet_model <- function(
     .best_metric = best_metric
   )
 
-  best_model <- auto_glmnet$model_info$fitted_wflw
+  auto_glmnet$model <- auto_glmnet$model_info$fitted_wflw
 
-  # Check performance
-  test_pred <- stats::predict(best_model, new_data = test)
-
-  df_test <- tibble::tibble(
-    actual = test[[.target]],
-    pred   = test_pred$.pred
-  )
-
-  mod_rmse     <- yardstick::rmse_vec(df_test$actual, df_test$pred)
-  mod_mae      <- yardstick::mae_vec(df_test$actual, df_test$pred)
-  mod_rsq_trad <- yardstick::rsq_trad_vec(df_test$actual, df_test$pred)
-  mod_acc      <- 100 - yardstick::smape_vec(df_test$actual, df_test$pred)
-
-  tb <- tibble::tibble(
-    rmse = mod_rmse |> round(2),
-    mae  = mod_mae |> round(2),
-    r2   = mod_rsq_trad |> round(2),
-    acc  = mod_acc |> round(1)
-  )
-
-  inset_tbl <- tibble::tibble(
-    x = df_test$actual[2],
-    y = df_test$pred |> max(),
-    tb = list(tb)
-  )
-
-  g <- ggplot2::ggplot(
-    data = df_test,
-    mapping = ggplot2::aes(x = actual, y = pred)
-  ) +
-    ggplot2::geom_smooth(col = "green", lty = 2, lwd = 1, method = "lm") +
-    ggplot2::geom_point(alpha = 0.5) +
-    ggplot2::coord_fixed(ratio = 1) +
-    ggpp::geom_table(
-      data = inset_tbl,
-      ggplot2::aes(x = x, y = y, label = tb)
-    )
-
-  return(
-    list(
-      model     = best_model,
-      test_plot = g
-    )
-  )
+  return(auto_glmnet)
 
 }
 
@@ -1438,50 +1402,53 @@ train_c50_model <- function(
 
   best_model <- auto_c50$model_info$fitted_wflw
 
-  # Check performance
-  test_pred <- stats::predict(best_model, new_data = test)
+  if (.model_type == "regression") {
 
-  df_test <- tibble::tibble(
-    actual = test[[.target]],
-    pred   = test_pred$.pred
-  )
+    # Check performance
+    test_pred <- stats::predict(best_model, new_data = test)
 
-  mod_rmse     <- yardstick::rmse_vec(df_test$actual, df_test$pred)
-  mod_mae      <- yardstick::mae_vec(df_test$actual, df_test$pred)
-  mod_rsq_trad <- yardstick::rsq_trad_vec(df_test$actual, df_test$pred)
-  mod_acc      <- 100 - yardstick::smape_vec(df_test$actual, df_test$pred)
-
-  tb <- tibble::tibble(
-    rmse = mod_rmse |> round(2),
-    mae  = mod_mae |> round(2),
-    r2   = mod_rsq_trad |> round(2),
-    acc  = mod_acc |> round(1)
-  )
-
-  inset_tbl <- tibble::tibble(
-    x = df_test$actual[2],
-    y = df_test$pred |> max(),
-    tb = list(tb)
-  )
-
-  g <- ggplot2::ggplot(
-    data = df_test,
-    mapping = ggplot2::aes(x = actual, y = pred)
-  ) +
-    ggplot2::geom_smooth(col = "green", lty = 2, lwd = 1, method = "lm") +
-    ggplot2::geom_point(alpha = 0.5) +
-    ggplot2::coord_fixed(ratio = 1) +
-    ggpp::geom_table(
-      data = inset_tbl,
-      ggplot2::aes(x = x, y = y, label = tb)
+    df_test <- tibble::tibble(
+      actual = test[[.target]],
+      pred   = test_pred$.pred
     )
 
-  return(
-    list(
-      model     = best_model,
-      test_plot = g
+    mod_rmse     <- yardstick::rmse_vec(df_test$actual, df_test$pred)
+    mod_mae      <- yardstick::mae_vec(df_test$actual, df_test$pred)
+    mod_rsq_trad <- yardstick::rsq_trad_vec(df_test$actual, df_test$pred)
+    mod_acc      <- 100 - yardstick::smape_vec(df_test$actual, df_test$pred)
+
+    tb <- tibble::tibble(
+      rmse = mod_rmse |> round(2),
+      mae  = mod_mae |> round(2),
+      r2   = mod_rsq_trad |> round(2),
+      acc  = mod_acc |> round(1)
     )
-  )
+
+    inset_tbl <- tibble::tibble(
+      x = df_test$actual[2],
+      y = df_test$pred |> max(),
+      tb = list(tb)
+    )
+
+    g <- ggplot2::ggplot(
+      data = df_test,
+      mapping = ggplot2::aes(x = actual, y = pred)
+    ) +
+      ggplot2::geom_smooth(col = "green", lty = 2, lwd = 1, method = "lm") +
+      ggplot2::geom_point(alpha = 0.5) +
+      ggplot2::coord_fixed(ratio = 1) +
+      ggpp::geom_table(
+        data = inset_tbl,
+        ggplot2::aes(x = x, y = y, label = tb)
+      )
+
+    auto_c50$test_plot <- g
+
+  }
+
+  auto_c50$model <- best_model
+
+  return(auto_c50)
 
 }
 
@@ -1649,50 +1616,53 @@ train_svm_rbf_model <- function(
 
   best_model <- auto_svm$model_info$fitted_wflw
 
-  # Check performance
-  test_pred <- stats::predict(best_model, new_data = test)
+  if (.model_type == "regression") {
 
-  df_test <- tibble::tibble(
-    actual = test[[.target]],
-    pred   = test_pred$.pred
-  )
+    # Check performance
+    test_pred <- stats::predict(best_model, new_data = test)
 
-  mod_rmse     <- yardstick::rmse_vec(df_test$actual, df_test$pred)
-  mod_mae      <- yardstick::mae_vec(df_test$actual, df_test$pred)
-  mod_rsq_trad <- yardstick::rsq_trad_vec(df_test$actual, df_test$pred)
-  mod_acc      <- 100 - yardstick::smape_vec(df_test$actual, df_test$pred)
-
-  tb <- tibble::tibble(
-    rmse = mod_rmse |> round(2),
-    mae  = mod_mae |> round(2),
-    r2   = mod_rsq_trad |> round(2),
-    acc  = mod_acc |> round(1)
-  )
-
-  inset_tbl <- tibble::tibble(
-    x = df_test$actual[2],
-    y = df_test$pred |> max(),
-    tb = list(tb)
-  )
-
-  g <- ggplot2::ggplot(
-    data = df_test,
-    mapping = ggplot2::aes(x = actual, y = pred)
-  ) +
-    ggplot2::geom_smooth(col = "green", lty = 2, lwd = 1, method = "lm") +
-    ggplot2::geom_point(alpha = 0.5) +
-    ggplot2::coord_fixed(ratio = 1) +
-    ggpp::geom_table(
-      data = inset_tbl,
-      ggplot2::aes(x = x, y = y, label = tb)
+    df_test <- tibble::tibble(
+      actual = test[[.target]],
+      pred   = test_pred$.pred
     )
 
-  return(
-    list(
-      model     = best_model,
-      test_plot = g
+    mod_rmse     <- yardstick::rmse_vec(df_test$actual, df_test$pred)
+    mod_mae      <- yardstick::mae_vec(df_test$actual, df_test$pred)
+    mod_rsq_trad <- yardstick::rsq_trad_vec(df_test$actual, df_test$pred)
+    mod_acc      <- 100 - yardstick::smape_vec(df_test$actual, df_test$pred)
+
+    tb <- tibble::tibble(
+      rmse = mod_rmse |> round(2),
+      mae  = mod_mae |> round(2),
+      r2   = mod_rsq_trad |> round(2),
+      acc  = mod_acc |> round(1)
     )
-  )
+
+    inset_tbl <- tibble::tibble(
+      x = df_test$actual[2],
+      y = df_test$pred |> max(),
+      tb = list(tb)
+    )
+
+    g <- ggplot2::ggplot(
+      data = df_test,
+      mapping = ggplot2::aes(x = actual, y = pred)
+    ) +
+      ggplot2::geom_smooth(col = "green", lty = 2, lwd = 1, method = "lm") +
+      ggplot2::geom_point(alpha = 0.5) +
+      ggplot2::coord_fixed(ratio = 1) +
+      ggpp::geom_table(
+        data = inset_tbl,
+        ggplot2::aes(x = x, y = y, label = tb)
+      )
+
+    auto_svm$test_plot <- g
+
+  }
+
+  auto_svm$model <- best_model
+
+  return(auto_svm)
 
 }
 
@@ -1860,50 +1830,53 @@ train_svm_poly_model <- function(
 
   best_model <- auto_svm$model_info$fitted_wflw
 
-  # Check performance
-  test_pred <- stats::predict(best_model, new_data = test)
+  if (.model_type == "regression") {
 
-  df_test <- tibble::tibble(
-    actual = test[[.target]],
-    pred   = test_pred$.pred
-  )
+    # Check performance
+    test_pred <- stats::predict(best_model, new_data = test)
 
-  mod_rmse     <- yardstick::rmse_vec(df_test$actual, df_test$pred)
-  mod_mae      <- yardstick::mae_vec(df_test$actual, df_test$pred)
-  mod_rsq_trad <- yardstick::rsq_trad_vec(df_test$actual, df_test$pred)
-  mod_acc      <- 100 - yardstick::smape_vec(df_test$actual, df_test$pred)
-
-  tb <- tibble::tibble(
-    rmse = mod_rmse |> round(2),
-    mae  = mod_mae |> round(2),
-    r2   = mod_rsq_trad |> round(2),
-    acc  = mod_acc |> round(1)
-  )
-
-  inset_tbl <- tibble::tibble(
-    x = df_test$actual[2],
-    y = df_test$pred |> max(),
-    tb = list(tb)
-  )
-
-  g <- ggplot2::ggplot(
-    data = df_test,
-    mapping = ggplot2::aes(x = actual, y = pred)
-  ) +
-    ggplot2::geom_smooth(col = "green", lty = 2, lwd = 1, method = "lm") +
-    ggplot2::geom_point(alpha = 0.5) +
-    ggplot2::coord_fixed(ratio = 1) +
-    ggpp::geom_table(
-      data = inset_tbl,
-      ggplot2::aes(x = x, y = y, label = tb)
+    df_test <- tibble::tibble(
+      actual = test[[.target]],
+      pred   = test_pred$.pred
     )
 
-  return(
-    list(
-      model     = best_model,
-      test_plot = g
+    mod_rmse     <- yardstick::rmse_vec(df_test$actual, df_test$pred)
+    mod_mae      <- yardstick::mae_vec(df_test$actual, df_test$pred)
+    mod_rsq_trad <- yardstick::rsq_trad_vec(df_test$actual, df_test$pred)
+    mod_acc      <- 100 - yardstick::smape_vec(df_test$actual, df_test$pred)
+
+    tb <- tibble::tibble(
+      rmse = mod_rmse |> round(2),
+      mae  = mod_mae |> round(2),
+      r2   = mod_rsq_trad |> round(2),
+      acc  = mod_acc |> round(1)
     )
-  )
+
+    inset_tbl <- tibble::tibble(
+      x = df_test$actual[2],
+      y = df_test$pred |> max(),
+      tb = list(tb)
+    )
+
+    g <- ggplot2::ggplot(
+      data = df_test,
+      mapping = ggplot2::aes(x = actual, y = pred)
+    ) +
+      ggplot2::geom_smooth(col = "green", lty = 2, lwd = 1, method = "lm") +
+      ggplot2::geom_point(alpha = 0.5) +
+      ggplot2::coord_fixed(ratio = 1) +
+      ggpp::geom_table(
+        data = inset_tbl,
+        ggplot2::aes(x = x, y = y, label = tb)
+      )
+
+    auto_svm$test_plot <- g
+
+  }
+
+  auto_svm$model <- best_model
+
+  return(auto_svm)
 
 }
 
@@ -1923,10 +1896,10 @@ coeteris_paribus <- function(
     .target
 ) {
 
-  # Check if .model is a model
-  if (!inherits(.model, "parsnip_model")) {
+  # Check if .model is a valid model
+  if (!is(.model$model, "workflow")) {
     stop(
-      "Argument \".model\" must be a \"parsnip\" model.",
+      "Argument \".model\" must contain a \"workflow\".",
       call. = FALSE
     )
   }
@@ -2000,10 +1973,10 @@ plant_performance_map <- function(
     .use_rgl = FALSE # just return the plotly plot
 ) {
 
-  # Check if .model is a parsnip model
-  if (!inherits(.model, "parsnip_model")) {
+  # Check if .model is a valid model
+  if (!is(.model$model, "workflow")) {
     stop(
-      "Argument \".model\" must be a \"parsnip\" model.",
+      "Argument \".model\" must contain a \"workflow\".",
       call. = FALSE
     )
   }
@@ -2211,9 +2184,12 @@ optimize_with_jaya <- function(
     .seed    = NULL
 ) {
 
-  # Check if .model is a parsnip model
-  if (!inherits(.model, "parsnip_model")) {
-    stop("The model must be a parsnip model.")
+  # Check if .model is a valid model
+  if (!is(.model$model, "workflow")) {
+    stop(
+      "Argument \".model\" must contain a \"workflow\".",
+      call. = FALSE
+    )
   }
 
   # Check if .vars is a character vector
@@ -2305,9 +2281,12 @@ optimize_with_cobyla <- function(
     .option  = "minimize"
 ) {
 
-  # Check if .model is a parsnip model
-  if (!inherits(.model, "parsnip_model")) {
-    stop("The model must be a parsnip model.")
+  # Check if .model is a valid model
+  if (!is(.model$model, "workflow")) {
+    stop(
+      "Argument \".model\" must contain a \"workflow\".",
+      call. = FALSE
+    )
   }
 
   # Check if .vars is a character vector
@@ -2414,9 +2393,12 @@ optimize_with_spaceballs_princess <- function(
     .use_all_cores = FALSE
 ) {
 
-  # Check if .model is a parsnip model
-  if (!inherits(.model, "parsnip_model")) {
-    stop("The model must be a parsnip model.")
+  # Check if .model is a valid model
+  if (!is(.model$model, "workflow")) {
+    stop(
+      "Argument \".model\" must contain a \"workflow\".",
+      call. = FALSE
+    )
   }
 
   # Check if .vars is a character vector

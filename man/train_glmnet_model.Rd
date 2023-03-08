@@ -12,7 +12,7 @@ train_glmnet_model(
   .tune = TRUE,
   .grid_size = 10L,
   .num_cores = 1L,
-  .model_type = "regression",
+  .model_type = "classification",
   .surrogate_model = FALSE
 )
 }
@@ -33,7 +33,7 @@ workflow.}
 
 \item{.num_cores}{Default is 1.}
 
-\item{.model_type}{Default is \code{regression}, can also be \code{classification.}}
+\item{.model_type}{Must be \code{classification.}}
 
 \item{.surrogate_model}{Logical, whether or not to conduct surrogate
 modeling, i.e., use all data to train the model.}

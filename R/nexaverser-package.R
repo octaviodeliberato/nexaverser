@@ -2,6 +2,7 @@
 "_PACKAGE"
 
 ## usethis namespace: start
+#' @importFrom methods is
 #' @importFrom modeltime nnetar_fit_impl
 #' @importFrom modeltime prophet_fit_impl
 #' @importFrom modeltime stlm_arima_fit_impl
