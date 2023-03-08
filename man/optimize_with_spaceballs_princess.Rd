@@ -16,7 +16,7 @@ optimize_with_spaceballs_princess(
 )
 }
 \arguments{
-\item{.model}{A \code{parsnip} trained model or \code{workflow}.}
+\item{.model}{A fitted model from one of the \code{nexaverser::train} functions.}
 
 \item{.vars}{A character vector with the names of the input variables.}
 

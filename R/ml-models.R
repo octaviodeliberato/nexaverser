@@ -1953,7 +1953,7 @@ coeteris_paribus <- function(
 
 #' plant_performance_map
 #'
-#' @param .model A `tidymodels` fitted model.
+#' @param .model A fitted model from one of the `nexaverser::train` functions.
 #' @param .data A data frame with the training set.
 #' @param .xvar The first input.
 #' @param .yvar The second input.
@@ -1975,8 +1975,10 @@ plant_performance_map <- function(
     .use_rgl = FALSE # just return the plotly plot
 ) {
 
+  model <- .model$model
+
   # Check if .model is a valid model
-  if (!is(.model$model, "workflow")) {
+  if (!is(model, "workflow")) {
     stop(
       "Argument \".model\" must contain a \"workflow\".",
       call. = FALSE
@@ -2071,7 +2073,7 @@ plant_performance_map <- function(
   }
 
   # use it
-  data_grid <- predictgrid(.data, .model, .xvar, .yvar, .zvar, row_nr, .res)
+  data_grid <- predictgrid(.data, model, .xvar, .yvar, .zvar, row_nr, .res)
 
   # Convert long-style data frame with x, y, and z vars into a list
   # with x and y as row/column values, and z as a matrix.
@@ -2165,7 +2167,7 @@ my_mean <- function(x, na.rm=TRUE) {
 
 #' optimize_with_jaya
 #'
-#' @param .model A `parsnip` trained model or `workflow`.
+#' @param .model A fitted model from one of the `nexaverser::train` functions.
 #' @param .vars A character vector with the names of the input variables.
 #' @param .lower A vector of lower bounds for the vaiables in the function.
 #' @param .upper A vector of upper bounds for the vaiables in the function.
@@ -2186,8 +2188,10 @@ optimize_with_jaya <- function(
     .seed    = NULL
 ) {
 
+  model <- .model$model
+
   # Check if .model is a valid model
-  if (!is(.model$model, "workflow")) {
+  if (!is(model, "workflow")) {
     stop(
       "Argument \".model\" must contain a \"workflow\".",
       call. = FALSE
@@ -2242,7 +2246,7 @@ optimize_with_jaya <- function(
       as.data.frame() |>
       purrr::set_names(.vars)
 
-    results <- stats::predict(.model, newdata) |> dplyr::pull(.pred)
+    results <- stats::predict(model, newdata) |> dplyr::pull(.pred)
 
     return(results)
 
@@ -2262,7 +2266,7 @@ optimize_with_jaya <- function(
 
 #' optimize_with_cobyla
 #'
-#' @param .model A `parsnip` trained model or `workflow`.
+#' @param .model A fitted model from one of the `nexaverser::train` functions.
 #' @param .vars A character vector with the names of the input variables.
 #' @param .lower A vector of lower bounds for the vaiables in the function.
 #' @param .upper A vector of upper bounds for the vaiables in the function.
@@ -2283,8 +2287,10 @@ optimize_with_cobyla <- function(
     .option  = "minimize"
 ) {
 
+  model <- .model$model
+
   # Check if .model is a valid model
-  if (!is(.model$model, "workflow")) {
+  if (!is(model, "workflow")) {
     stop(
       "Argument \".model\" must contain a \"workflow\".",
       call. = FALSE
@@ -2339,7 +2345,7 @@ optimize_with_cobyla <- function(
       as.data.frame() |>
       purrr::set_names(.vars)
 
-    results <- stats::predict(.model, newdata) |> dplyr::pull(.pred)
+    results <- stats::predict(model, newdata) |> dplyr::pull(.pred)
 
     mult <- switch(
       .option,
@@ -2369,7 +2375,7 @@ optimize_with_cobyla <- function(
 
 #' optimize_with_spaceballs_princess
 #'
-#' @param .model A `parsnip` trained model or `workflow`.
+#' @param .model A fitted model from one of the `nexaverser::train` functions.
 #' @param .vars A character vector with the names of the input variables.
 #' @param .lower A vector of lower bounds for the vaiables in the function.
 #' @param .upper A vector of upper bounds for the vaiables in the function.
@@ -2395,8 +2401,10 @@ optimize_with_spaceballs_princess <- function(
     .use_all_cores = FALSE
 ) {
 
+  model <- .model$model
+
   # Check if .model is a valid model
-  if (!is(.model$model, "workflow")) {
+  if (!is(model, "workflow")) {
     stop(
       "Argument \".model\" must contain a \"workflow\".",
       call. = FALSE
@@ -2454,7 +2462,7 @@ optimize_with_spaceballs_princess <- function(
       as.data.frame() |>
       purrr::set_names(.vars)
 
-    results <- stats::predict(.model, newdata) |> dplyr::pull(.pred)
+    results <- stats::predict(model, newdata) |> dplyr::pull(.pred)
 
     return(results)
 

@@ -15,7 +15,7 @@ plant_performance_map(
 )
 }
 \arguments{
-\item{.model}{A \code{tidymodels} fitted model.}
+\item{.model}{A fitted model from one of the \code{nexaverser::train} functions.}
 
 \item{.data}{A data frame with the training set.}
 
