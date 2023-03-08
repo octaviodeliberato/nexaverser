@@ -7,7 +7,7 @@
 coeteris_paribus(.model, .newdata, .target)
 }
 \arguments{
-\item{.model}{A fitted model from \code{tidymodels}.}
+\item{.model}{A fitted model from one of the \code{nexaverser::train} functions.}
 
 \item{.newdata}{A data frame.}
 

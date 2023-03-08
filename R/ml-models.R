@@ -1883,7 +1883,7 @@ train_svm_poly_model <- function(
 
 #' coeteris_paribus
 #'
-#' @param .model A fitted model from `tidymodels`.
+#' @param .model A fitted model from one of the `nexaverser::train` functions.
 #' @param .newdata A data frame.
 #' @param .target The name of the dependent variable.
 #'
@@ -1896,8 +1896,10 @@ coeteris_paribus <- function(
     .target
 ) {
 
+  model <- .model$model
+
   # Check if .model is a valid model
-  if (!is(.model$model, "workflow")) {
+  if (!is(model, "workflow")) {
     stop(
       "Argument \".model\" must contain a \"workflow\".",
       call. = FALSE
@@ -1931,7 +1933,7 @@ coeteris_paribus <- function(
   y <- .target
 
   explainer <- DALEX::explain(
-    model            = .model,
+    model            = model,
     data             = .newdata[, x],
     y                = .newdata[[y]],
     predict_function = pred,
