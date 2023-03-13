@@ -1,6 +1,6 @@
 #' select_features_with_boruta
 #'
-#' @param .tag_dat A time series with `date` (days) and `value` cols.
+#' @param .tag_dat A data frame with `date` and numeric cols.
 #' @param .target The name (string) of the target variable.
 #' @param .balance Logical, whether or not to balance the dataset.
 #' @param .with_tentative Logical, whether or not to include the 'tentative
@@ -158,7 +158,7 @@ select_features_with_boruta <- function(
 
 #' select_features_with_trex
 #'
-#' @param .tag_dat A time series with `date` (days) and `value` cols.
+#' @param .tag_dat A data frame with `date` and numeric cols.
 #' @param .target The name (string) of the target variable.
 #' @param .balance Logical, whether or not to balance the dataset.
 #' @param .return_data Logical, whether or not to return the dataset in the
@@ -352,7 +352,7 @@ select_features_with_trex <- function(
 
 #' select_features_with_pps
 #'
-#' @param .tag_dat A time series with `date` (days) and `value` cols.
+#' @param .tag_dat A data frame with `date` and numeric cols.
 #' @param .target The name (string) of the target variable.
 #' @param .balance Logical, whether or not to balance the dataset.
 #' @param .return_data Logical, whether or not to return the dataset in the

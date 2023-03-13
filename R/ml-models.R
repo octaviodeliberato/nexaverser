@@ -1,6 +1,6 @@
 #' train_cubist_model
 #'
-#' @param .data A time series with `date` (days) and `value` cols.
+#' @param .data A data frame with `date` and numeric cols.
 #' @param .target The name (string) of the target variable.
 #' @param .prop The proportion of data to be retained for modeling/analysis.
 #' @param .strat Logical, whether or not to conduct stratified sampling by
@@ -221,7 +221,7 @@ train_cubist_model <- function(
 
 #' train_xgboost_model
 #'
-#' @param .data A time series with `date` (days) and `value` cols.
+#' @param .data A data frame with `date` and numeric cols.
 #' @param .target The name (string) of the target variable.
 #' @param .prop The proportion of data to be retained for modeling/analysis.
 #' @param .strat Logical, whether or not to conduct stratified sampling by
@@ -435,7 +435,7 @@ train_xgboost_model <- function(
 
 #' train_mars_model
 #'
-#' @param .data A time series with `date` (days) and `value` cols.
+#' @param .data A data frame with `date` and numeric cols.
 #' @param .target The name (string) of the target variable.
 #' @param .prop The proportion of data to be retained for modeling/analysis.
 #' @param .strat Logical, whether or not to conduct stratified sampling by
@@ -649,7 +649,7 @@ train_mars_model <- function(
 
 #' train_ranger_model
 #'
-#' @param .data A time series with `date` (days) and `value` cols.
+#' @param .data A data frame with `date` and numeric cols.
 #' @param .target The name (string) of the target variable.
 #' @param .prop The proportion of data to be retained for modeling/analysis.
 #' @param .strat Logical, whether or not to conduct stratified sampling by
@@ -863,7 +863,7 @@ train_ranger_model <- function(
 
 #' train_knn_model
 #'
-#' @param .data A time series with `date` (days) and `value` cols.
+#' @param .data A data frame with `date` and numeric cols.
 #' @param .target The name (string) of the target variable.
 #' @param .prop The proportion of data to be retained for modeling/analysis.
 #' @param .strat Logical, whether or not to conduct stratified sampling by
@@ -1077,7 +1077,7 @@ train_knn_model <- function(
 
 #' train_glmnet_model
 #'
-#' @param .data A time series with `date` (days) and `value` cols.
+#' @param .data A data frame with `date` and numeric cols.
 #' @param .target The name (string) of the target variable.
 #' @param .prop The proportion of data to be retained for modeling/analysis.
 #' @param .strat Logical, whether or not to conduct stratified sampling by
@@ -1241,7 +1241,7 @@ train_glmnet_model <- function(
 
 #' train_c50_model
 #'
-#' @param .data A time series with `date` (days) and `value` cols.
+#' @param .data A data frame with `date` and numeric cols.
 #' @param .target The name (string) of the target variable.
 #' @param .prop The proportion of data to be retained for modeling/analysis.
 #' @param .strat Logical, whether or not to conduct stratified sampling by
@@ -1455,7 +1455,7 @@ train_c50_model <- function(
 
 #' train_svm_rbf_model
 #'
-#' @param .data A time series with `date` (days) and `value` cols.
+#' @param .data A data frame with `date` and numeric cols.
 #' @param .target The name (string) of the target variable.
 #' @param .prop The proportion of data to be retained for modeling/analysis.
 #' @param .strat Logical, whether or not to conduct stratified sampling by
@@ -1669,7 +1669,7 @@ train_svm_rbf_model <- function(
 
 #' train_svm_poly_model
 #'
-#' @param .data A time series with `date` (days) and `value` cols.
+#' @param .data A data frame with `date` and numeric cols.
 #' @param .target The name (string) of the target variable.
 #' @param .prop The proportion of data to be retained for modeling/analysis.
 #' @param .strat Logical, whether or not to conduct stratified sampling by

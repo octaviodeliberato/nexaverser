@@ -17,7 +17,7 @@ train_svm_poly_model(
 )
 }
 \arguments{
-\item{.data}{A time series with \code{date} (days) and \code{value} cols.}
+\item{.data}{A data frame with \code{date} and numeric cols.}
 
 \item{.target}{The name (string) of the target variable.}
 
