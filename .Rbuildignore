@@ -4,3 +4,7 @@
 ^data-raw$
 ^README\.Rmd$
 ^\.github$
+^feature_selection$
+^machine_learning$
+^tag_assessment$
+^time_series$
