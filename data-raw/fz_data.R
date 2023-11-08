@@ -1,5 +1,7 @@
 ## code to prepare `fz_data` dataset goes here
-fz_data_1 <- readxl::read_xlsx("data-raw/TAGS FZ.xlsx", sheet = 1, skip = 2)
+fz_data_1 <- readxl::read_xlsx(
+  paste0(here::here(), "/data-raw/TAGS FZ.xlsx"), sheet = 1, skip = 2
+)
 
 names(fz_data_1) |>
   grep(pattern = "...", fixed = TRUE) -> .
@@ -31,7 +33,9 @@ fz_data_1 <- fz_data_1[rows_to_keep, cols_to_keep] |>
     dplyr::across(tidyselect::where(is.numeric), ~mean(.x, na.rm = TRUE))
   )
 
-fz_data_2 <- readxl::read_excel("data-raw/Dados-FZ-5-anos.xlsx")
+fz_data_2 <- readxl::read_excel(
+  paste0(here::here(), "/data-raw/Dados-FZ-5-anos.xlsx")
+)
 
 fz_data_2 <- fz_data_2 |>
   dplyr::mutate(Data = as.Date(Data)) |>
@@ -50,8 +54,10 @@ fz_data_3 <- purrr::map2_df(
   }
 )
 
-fz_data_4 <- readxl::read_xlsx("data-raw/TAGS FZ COMPLEMENTARES.xlsx",
-                               sheet = 2, skip = 1)
+fz_data_4 <- readxl::read_xlsx(
+  paste0(here::here(), "/data-raw/data-raw/TAGS FZ COMPLEMENTARES.xlsx"),
+  sheet = 2, skip = 1
+)
 
 names(fz_data_4) |>
   grep(pattern = "...", fixed = TRUE) -> .
@@ -91,7 +97,5 @@ fz_data <- dplyr::bind_cols(date = fz_data_1$date, fz_data_3) |>
   dplyr::relocate(lb_fz_filtros033silw_zn, .after = tidyselect::last_col())
 
 visdat::vis_miss(fz_data)
-
-# fz_data <- readxl::read_excel("data-raw/lb_fz_filtros033silw_zn.xlsx")
 
 usethis::use_data(fz_data, overwrite = TRUE)

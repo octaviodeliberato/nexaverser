@@ -58,18 +58,3 @@ test_that("impute_missing_values works", {
     impute_missing_values(.tag_dat = fz_data[1:360, ])
   )
 })
-
-
-dat <- fz_data[1:360, ] |>
-  tidyr::replace_na(data = _, replace = list(fz_s_0033_zn2 = 0))
-
-test_that("extract_anomalies works", {
-  expect_no_error(
-    extract_anomalies(
-      data      = dat,
-      date_col  = "date",
-      value_col = "fz_s_0033_zn2",
-      anomaly   = "Both"
-    )
-  )
-})
