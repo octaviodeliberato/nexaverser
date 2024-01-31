@@ -6,6 +6,7 @@
 \usage{
 assess_tag(
   .tag_dat,
+  .avg_by = "day",
   .pad = FALSE,
   .imp = FALSE,
   .clean = FALSE,
@@ -19,6 +20,8 @@ assess_tag(
 }
 \arguments{
 \item{.tag_dat}{A time series with \code{date} and \code{value} cols.}
+
+\item{.avg_by}{A string, like "day" or "2 hours", to average the time series.}
 
 \item{.pad}{Logical, whether or not to pad the time series.}
 
