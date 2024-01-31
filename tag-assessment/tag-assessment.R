@@ -93,8 +93,8 @@ plot_tag_data <- function(
         tidyr::pivot_longer(-date) |>
         timetk::plot_time_series(
           .date_var    = date,
-          .value       = value, # nolint
-          .color_var   = name,  # nolint
+          .value       = value,
+          .color_var   = name,
           .smooth      = .loess,
           .interactive = .plotly
         ) +
@@ -106,8 +106,8 @@ plot_tag_data <- function(
         tidyr::pivot_longer(-date) |>
         timetk::plot_time_series(
           .date_var    = date,
-          .value       = value, # nolint
-          .color_var   = name,  # nolint
+          .value       = value,
+          .color_var   = name,
           .smooth      = FALSE,
           .interactive = FALSE
         ) +
@@ -199,6 +199,7 @@ plot_mavg_data <- function(data) {
 #' @author Octavio Deliberato Neto.
 #'
 #' @param .tag_dat A time series with `date` and `value` cols.
+#' @param .avg_by A string, like "day" or "2 hours", to average the time series.
 #' @param .pad Logical, whether or not to pad the time series.
 #' @param .imp Logical, whether or not to impute missing values using linear
 #' interpolation.
@@ -222,6 +223,7 @@ plot_mavg_data <- function(data) {
 #'
 assess_tag <- function(
     .tag_dat,
+    .avg_by  = "day",
     .pad     = FALSE,
     .imp     = FALSE,
     .clean   = FALSE,
@@ -248,6 +250,16 @@ assess_tag <- function(
 
     rlang::abort(
       message = "The supplied data must have exactly two columns.",
+      use_cli_format = TRUE
+    )
+
+  }
+
+  # Check if .avg_by is a string
+  if (!is.character(.avg_by)) {
+
+    rlang::abort(
+      message = "The supplied average by argument must be a string.",
       use_cli_format = TRUE
     )
 
@@ -300,7 +312,7 @@ assess_tag <- function(
     .tag_dat <- .tag_dat |>
       timetk::summarise_by_time(
         .date_var = date,
-        .by = "day",
+        .by = .avg_by,
         value = mean(value, na.rm = TRUE)
       )
 
@@ -311,7 +323,7 @@ assess_tag <- function(
   if (.pad) {
 
     .tag_dat <- .tag_dat |>
-      timetk::pad_by_time(.date_var = date, .by = 'day', .pad_value = 0)
+      timetk::pad_by_time(.date_var = date, .by = .avg_by, .pad_value = 0)
 
   }
 
