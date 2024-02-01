@@ -319,8 +319,6 @@ assess_tag <- function(
 
   }
 
-  .tag_dat$date <- as.Date(.tag_dat$date)
-
   if (.pad) {
 
     .tag_dat <- .tag_dat |>
