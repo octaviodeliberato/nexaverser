@@ -1027,12 +1027,24 @@ train_knn_model <- function(
 
   if (.model_type == "regression") {
 
+    # Prep the recipe to compute statistics
+    prepped_rec <- recipes::prep(rec_obj, training = train)
+
+    # Example of accessing the mean and sd for the target variable
+    means <- prepped_rec$steps[[.target]]$means
+    sds <- prepped_rec$steps[[.target]]$sds
+
     # Check performance
-    test_pred <- stats::predict(best_model, new_data = test)
+    test_pred <- stats::predict(
+      best_model,
+      new_data = recipes::bake(prepped_rec, new_data = test)
+    )
+
+    test_pred_unnormalized <- test_pred$.pred * sds + means
 
     df_test <- tibble::tibble(
       actual = test[[.target]],
-      pred   = test_pred$.pred
+      pred   = test_pred_unnormalized
     )
 
     mod_rmse     <- yardstick::rmse_vec(df_test$actual, df_test$pred)
