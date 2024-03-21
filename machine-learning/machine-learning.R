@@ -1030,12 +1030,12 @@ train_knn_model <- function(
     prepped_rec <- recipes::prep(rec_obj, training = train)
 
     # Example of accessing the mean and sd for the target variable
-    means <- prepped_rec$steps[[.target]]$means
-    sds <- prepped_rec$steps[[.target]]$sds
+    means <- prepped_rec$steps[[4]]$means[[.target]]
+    sds <- prepped_rec$steps[[4]]$sds[[.target]]
 
     # Check performance
     test_pred <- stats::predict(
-      best_model,
+      best_model$fit$fit,
       new_data = recipes::bake(prepped_rec, new_data = test)
     )
 
