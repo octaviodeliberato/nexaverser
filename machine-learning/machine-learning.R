@@ -172,7 +172,7 @@ train_cubist_model <- function(
 
   best_model <- auto_cube$model_info$fitted_wflw
 
-  # Check performance
+  # Make predictions
   test_pred <- stats::predict(best_model, new_data = test)
 
   df_test <- tibble::tibble(
@@ -384,7 +384,7 @@ train_xgboost_model <- function(
 
   if (.model_type == "regression") {
 
-    # Check performance
+    # Make predictions
     test_pred <- stats::predict(best_model, new_data = test)
 
     df_test <- tibble::tibble(
@@ -598,7 +598,7 @@ train_mars_model <- function(
 
   if (.model_type == "regression") {
 
-    # Check performance
+    # Make predictions
     test_pred <- stats::predict(best_model, new_data = test)
 
     df_test <- tibble::tibble(
@@ -812,7 +812,7 @@ train_ranger_model <- function(
 
   if (.model_type == "regression") {
 
-    # Check performance
+    # Make predictions
     test_pred <- stats::predict(best_model, new_data = test)
 
     df_test <- tibble::tibble(
@@ -1033,7 +1033,7 @@ train_knn_model <- function(
     means <- prepped_rec$steps[[4]]$means[[.target]]
     sds <- prepped_rec$steps[[4]]$sds[[.target]]
 
-    # Check performance
+    # Make predictions
     test_pred <- stats::predict(
       best_model$fit$fit,
       new_data = recipes::bake(prepped_rec, new_data = test)
@@ -1416,7 +1416,7 @@ train_c50_model <- function(
 
   if (.model_type == "regression") {
 
-    # Check performance
+    # Make predictions
     test_pred <- stats::predict(best_model, new_data = test)
 
     df_test <- tibble::tibble(
@@ -1630,24 +1630,12 @@ train_svm_rbf_model <- function(
 
   if (.model_type == "regression") {
 
-    # Prep the recipe to compute statistics
-    prepped_rec <- recipes::prep(rec_obj, training = train)
-
-    # Accessing the mean and sd for the target variable
-    means <- prepped_rec$steps[[4]]$means[[.target]]
-    sds <- prepped_rec$steps[[4]]$sds[[.target]]
-
-    # Check performance
-    test_pred <- stats::predict(
-      best_model$fit$fit,
-      new_data = recipes::bake(prepped_rec, new_data = test)
-    )
-
-    test_pred_unnormalized <- test_pred$.pred * sds + means
+    # Make predictions
+    test_pred <- stats::predict(best_model, new_data = test)
 
     df_test <- tibble::tibble(
       actual = test[[.target]],
-      pred   = test_pred_unnormalized
+      pred   = test_pred$.pred
     )
 
     mod_rmse     <- yardstick::rmse_vec(df_test$actual, df_test$pred)
@@ -1856,24 +1844,12 @@ train_svm_poly_model <- function(
 
   if (.model_type == "regression") {
 
-    # Prep the recipe to compute statistics
-    prepped_rec <- recipes::prep(rec_obj, training = train)
-
-    # Accessing the mean and sd for the target variable
-    means <- prepped_rec$steps[[4]]$means[[.target]]
-    sds <- prepped_rec$steps[[4]]$sds[[.target]]
-
-    # Check performance
-    test_pred <- stats::predict(
-      best_model$fit$fit,
-      new_data = recipes::bake(prepped_rec, new_data = test)
-    )
-
-    test_pred_unnormalized <- test_pred$.pred * sds + means
+    # Make predictions
+    test_pred <- stats::predict(best_model, new_data = test)
 
     df_test <- tibble::tibble(
       actual = test[[.target]],
-      pred   = test_pred_unnormalized
+      pred   = test_pred$.pred
     )
 
     mod_rmse     <- yardstick::rmse_vec(df_test$actual, df_test$pred)
